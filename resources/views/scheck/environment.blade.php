@@ -300,9 +300,9 @@
 
         function confirmSelection() {
             if (selectedVo) {
-                alert(`Vo = ${selectedVo} m/s で確定しました。\n${selectedInfo}`);
-                // 実際の実装では、次の画面に遷移またはデータを保存
-                // window.location.href = '{{ route('scheck.site') }}';
+                alert(`Vo = ${selectedVo} m/s で確定しました。\n${selectedInfo}\n\n次の画面（現場パラメータ入力）に進みます。`);
+                // 次の画面に遷移
+                window.location.href = '{{ route('scheck.site') }}';
             }
         }
     </script>
