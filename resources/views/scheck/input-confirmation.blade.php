@@ -6,7 +6,7 @@
                 <div class="flex items-center space-x-4 mb-4">
                     <button
                         class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        onclick="window.location.href='{{ route('scheck.input-parameters') }}'">
+                        onclick="window.location.href='{{ route('scheck.allowable-stress') }}'">
                         ← 前に戻る
                     </button>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
@@ -23,6 +23,20 @@
                 <div class="space-y-6">
                     <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">係数選択結果</h2>
 
+                    {{-- 環境設定 --}}
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-semibold text-gray-900 dark:text-white">Vo: 基本風速</h3>
+                            <button class="text-blue-600 hover:text-blue-800 text-sm"
+                                onclick="window.location.href='{{ route('scheck.environment') }}'">
+                                変更
+                            </button>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">
+                            Vo = {{ $param->Vo ?? '-' }} m/s
+                        </p>
+                    </div>
+
                     {{-- S係数 --}}
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                         <div class="flex justify-between items-center mb-2">
@@ -32,9 +46,16 @@
                                 変更
                             </button>
                         </div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm" id="s-coefficient-info">
-                            選択された地域分類と対応するS値が表示されます
-                        </p>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm space-y-1">
+                            <p>S10 = {{ $param->S10 ?? '-' }}</p>
+                            <p>S20 = {{ $param->S20 ?? '-' }}</p>
+                            <p>S35 = {{ $param->S35 ?? '-' }}</p>
+                            <p>S40 = {{ $param->S40 ?? '-' }}</p>
+                            <p>S50 = {{ $param->S50 ?? '-' }}</p>
+                            <p>S55 = {{ $param->S55 ?? '-' }}</p>
+                            <p>S70 = {{ $param->S70 ?? '-' }}</p>
+                            <p>S100 = {{ $param->S100 ?? '-' }}</p>
+                        </div>
                     </div>
 
                     {{-- Ke係数 --}}
@@ -46,8 +67,8 @@
                                 変更
                             </button>
                         </div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm" id="ke-coefficient-info">
-                            選択された地域: その他 (Ke = 1.0)
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">
+                            Ke = {{ $param->Ke ?? '-' }}
                         </p>
                     </div>
 
@@ -60,8 +81,8 @@
                                 変更
                             </button>
                         </div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm" id="eb-coefficient-info">
-                            選択された建築物: 近隣高層建築物無し (EB = 1.0)
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">
+                            EB = {{ $param->EB ?? '-' }}
                         </p>
                     </div>
 
@@ -74,8 +95,8 @@
                                 変更
                             </button>
                         </div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm" id="eg-coefficient-info">
-                            選択された地形: 平坦・非傾斜地 (Eg = 1.0)
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">
+                            Eg = {{ $param->Eg ?? '-' }}
                         </p>
                     </div>
 
@@ -88,9 +109,10 @@
                                 変更
                             </button>
                         </div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm" id="co-coefficient-info">
-                            選択された部材: 防音パネル (φ = 1.00, Co = 2.00)
-                        </p>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm space-y-1">
+                            <p>φ (phi) = {{ $param->phi ?? '-' }}</p>
+                            <p>Co = {{ $param->Co ?? '-' }}</p>
+                        </div>
                     </div>
 
                     {{-- 単つなぎ許容応力 --}}
@@ -102,10 +124,10 @@
                                 変更
                             </button>
                         </div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm" id="allowable-stress-info">
-                            選択された材料: 単つなぎ本体 (KS200 1000等)<br>
-                            許容荷重入力: 4.41 kN, 割増し: 1.3, 許容荷重: 5.733
-                        </p>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm space-y-1">
+                            <p>壁繋ぎ許容応力 = {{ $param->wall_tie_stress ?? '-' }} kN</p>
+                            <p>壁繋ぎ許容割増値 (War) = {{ $param->War ?? '-' }}</p>
+                        </div>
                     </div>
                 </div>
 
@@ -113,86 +135,79 @@
                 <div class="space-y-6">
                     <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">現場パラメータ</h2>
 
-                    {{-- 一般負担面積 --}}
+                    {{-- R値計算結果 --}}
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                         <div class="flex justify-between items-center mb-2">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">一般負担面積</h3>
+                            <h3 class="font-semibold text-gray-900 dark:text-white">R: 足場の形状、シート及びネット</h3>
+                            <button class="text-blue-600 hover:text-blue-800 text-sm"
+                                onclick="window.location.href='{{ route('scheck.site') }}'">
+                                変更
+                            </button>
+                        </div>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm space-y-2">
+                            <div class="border-l-4 border-green-500 pl-3">
+                                <p class="font-medium text-green-700 dark:text-green-400">地上から建つ場合</p>
+                                <p>長さ (Lg) = {{ $param->Lg ?? '-' }} m</p>
+                                <p>幅 (Bg) = {{ $param->Bg ?? '-' }} m</p>
+                                @if ($param && $param->Lg && $param->Bg)
+                                    @php
+                                        $ratio_LB = $param->Lg / $param->Bg;
+                                        $rGround =
+                                            round((0.5813 + 0.013 * $ratio_LB - 0.0001 * pow($ratio_LB, 2)) * 10) / 10;
+                                    @endphp
+                                    <p class="font-medium">R値 = {{ number_format($rGround, 1) }}</p>
+                                @endif
+                            </div>
+                            <div class="border-l-4 border-blue-500 pl-3">
+                                <p class="font-medium text-blue-700 dark:text-blue-400">空中にある場合</p>
+                                <p>幅 (Ba) = {{ $param->Ba ?? '-' }} m</p>
+                                <p>高さ (Ha) = {{ $param->Ha ?? '-' }} m</p>
+                                @if ($param && $param->Ba && $param->Ha)
+                                    @php
+                                        $ratio_H2B = ($param->Ha * 2) / $param->Ba;
+                                        $rAerial =
+                                            round((0.5813 + 0.013 * $ratio_H2B - 0.001 * pow($ratio_H2B, 2)) * 10) / 10;
+                                    @endphp
+                                    <p class="font-medium">R値 = {{ number_format($rAerial, 1) }}</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- 風圧力計算パラメータ --}}
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-semibold text-gray-900 dark:text-white">風圧力計算パラメータ</h3>
                             <button class="text-blue-600 hover:text-blue-800 text-sm"
                                 onclick="window.location.href='{{ route('scheck.input-parameters') }}'">
                                 変更
                             </button>
                         </div>
-                        <div class="space-y-1 text-sm">
-                            <p class="text-gray-600 dark:text-gray-400">
-                                長さ L1: <span id="param-l1" class="font-medium text-gray-900 dark:text-white">-</span> m
-                            </p>
-                            <p class="text-gray-600 dark:text-gray-400">
-                                高さ H1: <span id="param-h1" class="font-medium text-gray-900 dark:text-white">-</span> m
-                            </p>
-                            <p class="text-gray-900 dark:text-white font-semibold">
-                                面積 A1: <span id="param-a1" class="text-blue-600">-</span> m² (切り上げ)
-                            </p>
-                        </div>
-                    </div>
-
-                    {{-- 突出部負担面積 --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">突出部負担面積</h3>
-                            <button class="text-blue-600 hover:text-blue-800 text-sm"
-                                onclick="window.location.href='{{ route('scheck.input-parameters') }}'">
-                                変更
-                            </button>
-                        </div>
-                        <div class="space-y-1 text-sm">
-                            <p class="text-gray-600 dark:text-gray-400">
-                                長さ L2: <span id="param-l2" class="font-medium text-gray-900 dark:text-white">-</span> m
-                            </p>
-                            <p class="text-gray-600 dark:text-gray-400">
-                                高さ上 h1: <span id="param-h2-upper"
-                                    class="font-medium text-gray-900 dark:text-white">-</span> m
-                            </p>
-                            <p class="text-gray-600 dark:text-gray-400">
-                                高さ下 h2: <span id="param-h2-lower"
-                                    class="font-medium text-gray-900 dark:text-white">-</span> m
-                            </p>
-                            <p class="text-gray-900 dark:text-white font-semibold">
-                                面積 a1: <span id="param-a2-upper" class="text-blue-600">-</span> m² (切り上げ)
-                            </p>
-                            <p class="text-gray-900 dark:text-white font-semibold">
-                                面積 a2: <span id="param-a2-lower" class="text-blue-600">-</span> m² (切り上げ)
-                            </p>
-                        </div>
-                    </div>
-
-                    {{-- 壁繋ぎ許容応力割増値 --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">壁繋ぎ許容応力割増値</h3>
-                            <button class="text-blue-600 hover:text-blue-800 text-sm"
-                                onclick="window.location.href='{{ route('scheck.input-parameters') }}'">
-                                変更
-                            </button>
-                        </div>
-                        <p class="text-gray-600 dark:text-gray-400 text-sm">
-                            War: <span id="param-war" class="font-medium text-gray-900 dark:text-white text-lg">-</span>
-                        </p>
-                    </div>
-
-                    {{-- 入力完了状況 --}}
-                    <div
-                        class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                        <h3 class="font-semibold text-green-900 dark:text-green-100 mb-2">入力完了状況</h3>
-                        <div class="space-y-1 text-sm">
-                            <p class="text-green-800 dark:text-green-200">
-                                ✓ 係数選択: <span id="coefficient-status">6項目</span>
-                            </p>
-                            <p class="text-green-800 dark:text-green-200">
-                                ✓ 現場パラメータ: <span id="parameter-status">8項目</span>
-                            </p>
-                            <p class="font-semibold text-green-900 dark:text-green-100 mt-2">
-                                全ての入力が完了しています
-                            </p>
+                        <div class="text-gray-600 dark:text-gray-400 text-sm space-y-2">
+                            @php
+                                $heightRanges = [
+                                    ['0～10m', 'L010', 'H010', 'A010'],
+                                    ['10～20m', 'L1020', 'H1020', 'A1020'],
+                                    ['20～35m', 'L2035', 'H2035', 'A2035'],
+                                    ['35～40m', 'L3540', 'H3540', 'A3540'],
+                                    ['40～50m', 'L4050', 'H4050', 'A4050'],
+                                    ['50～55m', 'L5055', 'H5055', 'A5055'],
+                                    ['55～70m', 'L5570', 'H5570', 'A5570'],
+                                    ['70～100m', 'L70100', 'H70100', 'A70100'],
+                                ];
+                            @endphp
+                            @foreach ($heightRanges as $range)
+                                @if ($param && ($param->{$range[1]} || $param->{$range[2]}))
+                                    <div class="border-l-2 border-gray-300 pl-2 mb-2">
+                                        <p class="font-medium">{{ $range[0] }}</p>
+                                        <p>幅: {{ $param->{$range[1]} ?? '-' }} m, 高さ: {{ $param->{$range[2]} ?? '-' }}
+                                            m</p>
+                                        @if ($param->{$range[3]})
+                                            <p>面積: {{ $param->{$range[3]} }} m²</p>
+                                        @endif
+                                    </div>
+                                @endif
+                            @endforeach
                         </div>
                     </div>
                 </div>
@@ -202,8 +217,8 @@
             <div class="flex justify-between mt-8 mb-8">
                 <button
                     class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                    onclick="window.location.href='{{ route('scheck.input-parameters') }}'">
-                    現場パラメータに戻る
+                    onclick="window.location.href='{{ route('scheck.allowable-stress') }}'">
+                    許容応力に戻る
                 </button>
 
                 <div class="flex space-x-4">
@@ -228,6 +243,11 @@
                         onclick="event.stopPropagation()">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">各入力画面に移動</h3>
                         <div class="space-y-2">
+                            <button
+                                class="w-full text-left px-4 py-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                                onclick="window.location.href='{{ route('scheck.environment') }}'">
+                                Vo: 基本風速
+                            </button>
                             <button
                                 class="w-full text-left px-4 py-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
                                 onclick="window.location.href='{{ route('scheck.s-coefficient') }}'">
@@ -260,8 +280,13 @@
                             </button>
                             <button
                                 class="w-full text-left px-4 py-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                                onclick="window.location.href='{{ route('scheck.input-parameters') }}'">
+                                onclick="window.location.href='{{ route('scheck.site') }}'">
                                 現場パラメータ入力
+                            </button>
+                            <button
+                                class="w-full text-left px-4 py-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                                onclick="window.location.href='{{ route('scheck.input-parameters') }}'">
+                                風圧力計算パラメータ
                             </button>
                         </div>
                         <button
@@ -277,80 +302,24 @@
 
     {{-- JavaScript --}}
     <script>
-        // URLパラメータから値を取得
-        function loadInputValues() {
-            // URLパラメータを取得
-            const urlParams = new URLSearchParams(window.location.search);
-
-            // 現場パラメータの取得
-            const params = {
-                l1: urlParams.get('l1') || '-',
-                h1: urlParams.get('h1') || '-',
-                a1: urlParams.get('a1') || '-',
-                l2: urlParams.get('l2') || '-',
-                h2_upper: urlParams.get('h2_upper') || '-',
-                h2_lower: urlParams.get('h2_lower') || '-',
-                a2_upper: urlParams.get('a2_upper') || '-',
-                a2_lower: urlParams.get('a2_lower') || '-',
-                war: urlParams.get('war') || '-'
-            };
-
-            // パラメータ表示を更新
-            Object.keys(params).forEach(key => {
-                const element = document.getElementById(`param-${key.replace('_', '-')}`);
-                if (element) {
-                    element.textContent = params[key];
-                }
-            });
-
-            // 入力完了状況を更新
-            updateCompletionStatus(params);
-        }
-
-        // 入力完了状況を更新
-        function updateCompletionStatus(params) {
-            const parameterCount = Object.values(params).filter(value => value !== '-').length;
-            const coefficientCount = 6; // 固定（係数選択は6項目）
-
-            document.getElementById('parameter-status').textContent = `${parameterCount}/9項目`;
-
-            // 全て入力されている場合の表示更新
-            const statusElement = document.querySelector('.bg-green-50 p');
-            if (parameterCount === 9) {
-                statusElement.innerHTML =
-                    '<span class="font-semibold text-green-900 dark:text-green-100">全ての入力が完了しています</span>';
-            } else {
-                statusElement.innerHTML =
-                    '<span class="font-semibold text-orange-900 dark:text-orange-100">現場パラメータの入力が不完全です</span>';
-                statusElement.parentElement.className =
-                    'bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800';
-            }
-        }
-
-        // クイックナビゲーション表示
         function showQuickNavigation() {
             document.getElementById('quick-nav-modal').classList.remove('hidden');
         }
 
-        // クイックナビゲーション非表示
         function hideQuickNavigation() {
             document.getElementById('quick-nav-modal').classList.add('hidden');
         }
 
-        // 計算実行
         function executeCalculation() {
-            const confirmed = confirm('入力された値で計算を実行しますか？\n\n計算実行後は値の変更ができなくなります。');
-
-            if (confirmed) {
-                alert('計算を実行します。\n\n※計算結果画面はまだ実装されていません。\n現在はサイト情報画面に遷移します。');
-                // 計算結果画面が実装されるまでの仮の遷移先
-                window.location.href = '{{ route('scheck.site') }}';
-            }
+            // 計算実行の処理（後で実装）
+            alert('計算を実行します。');
         }
 
-        // ページ読み込み時に値を表示
-        window.addEventListener('DOMContentLoaded', function() {
-            loadInputValues();
+        // ESCキーでモーダルを閉じる
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                hideQuickNavigation();
+            }
         });
     </script>
 </x-layouts.app>

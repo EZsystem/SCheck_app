@@ -316,6 +316,27 @@
                 </div>
             </div>
 
+            {{-- 壁繋ぎ許容割増値入力 --}}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg mt-6">
+                <div class="p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        壁繋ぎ許容割増値入力
+                    </h2>
+
+                    <div class="max-w-md">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            War (0.0 ～ 10.0)
+                        </label>
+                        <input type="number" id="war-input" step="0.1" min="0.0" max="10.0"
+                            value="1.0" placeholder="1.0"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white" />
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            壁繋ぎ許容割増値を0.0から10.0の範囲で入力してください
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {{-- ボタン群 --}}
             <div class="flex justify-between mt-8 mb-8">
                 <button
@@ -390,7 +411,16 @@
         }
 
         function confirmSelection() {
-            // 許容荷重値をサーバーに送信するフォームを作成
+            // War値を取得
+            const warValue = parseFloat(document.getElementById('war-input').value);
+
+            // バリデーション
+            if (isNaN(warValue) || warValue < 0.0 || warValue > 10.0) {
+                alert('War値は0.0から10.0の範囲で入力してください。');
+                return;
+            }
+
+            // 許容荷重値とWar値をサーバーに送信するフォームを作成
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '{{ route('scheck.allowable-stress.save') }}';
@@ -408,6 +438,13 @@
             wallTieStressInput.name = 'wall_tie_stress';
             wallTieStressInput.value = selectedAllowableLoad;
             form.appendChild(wallTieStressInput);
+
+            // War値を追加
+            const warInput = document.createElement('input');
+            warInput.type = 'hidden';
+            warInput.name = 'War';
+            warInput.value = warValue;
+            form.appendChild(warInput);
 
             // フォームをページに追加して送信
             document.body.appendChild(form);

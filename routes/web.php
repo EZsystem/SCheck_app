@@ -165,6 +165,7 @@ Route::get('/scheck/co-coefficient', function () {
 Route::post('/scheck/allowable-stress', function (\Illuminate\Http\Request $request) {
     $validated = $request->validate([
         'wall_tie_stress' => ['required', 'numeric', 'min:0.1', 'max:10.0'],
+        'War' => ['required', 'numeric', 'min:0.0', 'max:10.0'],
     ]);
 
     $id = session('scheck_param_id');
@@ -184,12 +185,43 @@ Route::get('/scheck/allowable-stress', function () {
     return view('scheck.allowable-stress');
 })->name('scheck.allowable-stress');
 
+// パラメータ入力保存
+Route::post('/scheck/input-parameters', function (\Illuminate\Http\Request $request) {
+    // 動的にバリデーションルールを作成
+    $rules = [];
+    $heightRanges = ['010', '1020', '2035', '3540', '4050', '5055', '5570', '70100'];
+
+    foreach ($heightRanges as $range) {
+        $rules["L{$range}"] = ['nullable', 'numeric', 'min:0', 'max:100'];
+        $rules["H{$range}"] = ['nullable', 'numeric', 'min:0', 'max:100'];
+        $rules["A{$range}"] = ['nullable', 'numeric', 'min:0', 'max:10000'];
+    }
+
+    $validated = $request->validate($rules);
+
+    $id = session('scheck_param_id');
+    $param = $id ? \App\Models\ScheckParam::find($id) : null;
+    if (!$param) {
+        $param = new \App\Models\ScheckParam();
+    }
+
+    $param->fill($validated);
+    $param->save();
+    session(['scheck_param_id' => $param->id]);
+
+    return redirect()->route('scheck.input-confirmation');
+})->name('scheck.input-parameters.save');
+
 Route::get('/scheck/input-parameters', function () {
     return view('scheck.input-parameters');
 })->name('scheck.input-parameters');
 
 Route::get('/scheck/input-confirmation', function () {
-    return view('scheck.input-confirmation');
+    // セッションからパラメータIDを取得
+    $id = session('scheck_param_id');
+    $param = $id ? \App\Models\ScheckParam::find($id) : null;
+
+    return view('scheck.input-confirmation', compact('param'));
 })->name('scheck.input-confirmation');
 
 // 現場条件保存
@@ -211,7 +243,7 @@ Route::post('/scheck/site', function (\Illuminate\Http\Request $request) {
     $param->save();
     session(['scheck_param_id' => $param->id]);
 
-    return redirect()->route('scheck.input-parameters');
+    return redirect()->route('scheck.input-confirmation');
 })->name('scheck.site.save');
 
 Route::get('/scheck/site', function () {
