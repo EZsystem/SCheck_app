@@ -201,9 +201,9 @@
         }
 
         function confirmSelection() {
-            alert(`Eg = ${selectedEG} (${selectedType}) で確定しました。\n\n次の画面（現場パラメータ入力）に進みます。`);
+            alert(`Eg = ${selectedEG} (${selectedType}) で確定しました。\n\n次の画面（Co係数入力）に進みます。`);
             // 次の画面に遷移
-            window.location.href = '{{ route('scheck.site') }}';
+            window.location.href = '{{ route('scheck.co-coefficient') }}';
         }
 
         // 初期状態で「平坦・非傾斜地」を選択状態にする

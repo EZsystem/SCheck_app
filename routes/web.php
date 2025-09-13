@@ -36,6 +36,10 @@ Route::get('/scheck/eg-coefficient', function () {
     return view('scheck.eg-coefficient');
 })->name('scheck.eg-coefficient');
 
+Route::get('/scheck/co-coefficient', function () {
+    return view('scheck.co-coefficient');
+})->name('scheck.co-coefficient');
+
 Route::get('/scheck/site', function () {
     return view('scheck.site');
 })->name('scheck.site');
