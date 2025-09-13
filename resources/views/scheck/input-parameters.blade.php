@@ -141,9 +141,28 @@
     </div>
 
     <script>
-        // ページ読み込み時にS係数を表示
+        // wall_tie_stress2の値をJavaScriptで利用可能にする
+        const wallTieStress2 = {{ $param->wall_tie_stress2 ?? 0 }};
+
+        // QzN値をJavaScriptで利用可能にする
+        const qzNValues = {
+            '10': {{ $param->QzN10 ?? 0 }},
+            '20': {{ $param->QzN20 ?? 0 }},
+            '35': {{ $param->QzN35 ?? 0 }},
+            '40': {{ $param->QzN40 ?? 0 }},
+            '50': {{ $param->QzN50 ?? 0 }},
+            '55': {{ $param->QzN55 ?? 0 }},
+            '70': {{ $param->QzN70 ?? 0 }},
+            '100': {{ $param->QzN100 ?? 0 }}
+        };
+
+        // C1値をJavaScriptで利用可能にする
+        const c1Value = {{ $param->C1 ?? 0 }};
+
+        // ページ読み込み時にS係数と壁繋ぎ許容応力を表示
         window.addEventListener('DOMContentLoaded', function() {
             displaySCoefficients();
+            initializeAllowableStress();
         });
 
         function displaySCoefficients() {
@@ -167,35 +186,124 @@
             });
         }
 
+        function initializeAllowableStress() {
+            // 初期表示では壁繋ぎ許容応力は空にする（入力時のみ表示）
+            const heightRanges = ['0_10', '10_20', '20_35', '35_40', '40_50', '50_55', '55_70', '70_100'];
+
+            heightRanges.forEach(range => {
+                const element = document.getElementById(`allowable_stress_${range}`);
+                if (element) {
+                    element.textContent = '-';
+                }
+            });
+        }
+
         function calculateRow(heightRange) {
             const width = parseFloat(document.getElementById(`width_${heightRange}`).value) || 0;
             const height = parseFloat(document.getElementById(`height_${heightRange}`).value) || 0;
 
-            if (width > 0 && height > 0) {
-                const area = width * height;
-                const s = parseFloat(document.getElementById(`s_${heightRange}`).textContent) || 1.0;
+            // リアルタイムで面積をデータベースに保存
+            saveAreaToDatabase(heightRange, width, height);
 
-                // 限界高の計算（仮）
-                const limitHeight = Math.round(height * 1.2 * 10) / 10;
-                document.getElementById(`limit_height_${heightRange}`).textContent = limitHeight.toFixed(1);
+            // 幅または高さが入力されている場合のみ処理
+            if (width > 0 || height > 0) {
+                // 両方の値が入力されている場合の計算
+                if (width > 0 && height > 0) {
+                    const area = width * height;
+                    const s = parseFloat(document.getElementById(`s_${heightRange}`).textContent) || 1.0;
 
-                // 負荷荷重の計算（仮）
-                const load = Math.round(area * s * 0.5 * 100) / 100;
-                document.getElementById(`load_${heightRange}`).textContent = load.toFixed(2);
+                    // 高さ範囲の変換マッピング
+                    const rangeMapping = {
+                        '0_10': '10',
+                        '10_20': '20',
+                        '20_35': '35',
+                        '35_40': '40',
+                        '40_50': '50',
+                        '50_55': '55',
+                        '55_70': '70',
+                        '70_100': '100'
+                    };
+                    const dbHeightRange = rangeMapping[heightRange];
+                    const qzN = qzNValues[dbHeightRange] || 0;
+                    const c1 = c1Value || 0;
+                    const wallTieStress = wallTieStress2 || 0;
 
-                // 壁繋ぎ許容応力（仮の値）
-                const allowableStress = 5.73;
-                document.getElementById(`allowable_stress_${heightRange}`).textContent = allowableStress.toFixed(2);
+                    // 限界高の計算: 限界高さ = 壁繋ぎ許容応力 / (QzN × C1 × 幅)
+                    if (qzN > 0 && c1 > 0 && width > 0 && wallTieStress > 0) {
+                        const limitHeight = wallTieStress / (qzN * c1 * width);
+                        // ROUNDDOWN(値, 3) = 小数点第3位で切り下げ
+                        const limitHeightRounded = Math.floor(limitHeight * 1000) / 1000;
+                        document.getElementById(`limit_height_${heightRange}`).textContent = limitHeightRounded.toFixed(3);
+                    } else {
+                        document.getElementById(`limit_height_${heightRange}`).textContent = '-';
+                    }
 
-                // 判定
-                const judgment = load <= allowableStress ? 'OK' : 'NG';
-                const judgmentCell = document.getElementById(`judgment_${heightRange}`);
-                judgmentCell.textContent = judgment;
-                judgmentCell.className = judgment === 'OK' ?
-                    'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-green-600' :
-                    'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-red-600';
+                    // 負荷荷重の計算（P = QzN × C1 × A）
+
+                    let load = 0;
+                    if (qzN > 0 && c1 > 0 && area > 0) {
+                        load = qzN * c1 * area;
+                        document.getElementById(`load_${heightRange}`).textContent = load.toFixed(2);
+                    } else {
+                        document.getElementById(`load_${heightRange}`).textContent = '-';
+                    }
+
+                    // 判定
+                    const allowableStress = wallTieStress2;
+                    if (load > 0 && allowableStress > 0) {
+                        const judgment = load <= allowableStress ? 'OK' : 'NG';
+                        const judgmentCell = document.getElementById(`judgment_${heightRange}`);
+                        judgmentCell.textContent = judgment;
+                        judgmentCell.className = judgment === 'OK' ?
+                            'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-green-600' :
+                            'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-red-600';
+                    } else {
+                        document.getElementById(`judgment_${heightRange}`).textContent = '-';
+                        document.getElementById(`judgment_${heightRange}`).className =
+                            'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold';
+                    }
+                } else {
+                    // どちらか一方のみ入力されている場合
+                    // 幅が入力されている場合は限界高さを計算
+                    const rangeMapping = {
+                        '0_10': '10',
+                        '10_20': '20',
+                        '20_35': '35',
+                        '35_40': '40',
+                        '40_50': '50',
+                        '50_55': '55',
+                        '55_70': '70',
+                        '70_100': '100'
+                    };
+                    const dbHeightRange = rangeMapping[heightRange];
+                    const qzN = qzNValues[dbHeightRange] || 0;
+                    const c1 = c1Value || 0;
+                    const wallTieStress = wallTieStress2 || 0;
+
+                    if (width > 0 && qzN > 0 && c1 > 0 && wallTieStress > 0) {
+                        // 限界高の計算: 限界高さ = 壁繋ぎ許容応力 / (QzN × C1 × 幅)
+                        const limitHeight = wallTieStress / (qzN * c1 * width);
+                        const limitHeightRounded = Math.floor(limitHeight * 1000) / 1000;
+                        document.getElementById(`limit_height_${heightRange}`).textContent = limitHeightRounded.toFixed(3);
+                    } else {
+                        document.getElementById(`limit_height_${heightRange}`).textContent = '-';
+                    }
+
+                    // 負荷荷重と判定はクリア
+                    document.getElementById(`load_${heightRange}`).textContent = '-';
+                    document.getElementById(`judgment_${heightRange}`).textContent = '-';
+                    document.getElementById(`judgment_${heightRange}`).className =
+                        'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold';
+                }
+
+                // 幅または高さが入力されている場合は壁繋ぎ許容応力を表示
+                if (wallTieStress2 > 0) {
+                    document.getElementById(`allowable_stress_${heightRange}`).textContent = wallTieStress2.toFixed(2);
+                } else {
+                    document.getElementById(`allowable_stress_${heightRange}`).textContent = '-';
+                }
             } else {
-                // 入力がない場合はクリア
+                // 両方とも0または空の場合は全てクリア
                 document.getElementById(`limit_height_${heightRange}`).textContent = '-';
                 document.getElementById(`load_${heightRange}`).textContent = '-';
                 document.getElementById(`allowable_stress_${heightRange}`).textContent = '-';
@@ -203,6 +311,52 @@
                 document.getElementById(`judgment_${heightRange}`).className =
                     'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold';
             }
+        }
+
+        function saveAreaToDatabase(heightRange, width, height) {
+            // 高さ範囲の形式を変換（0_10 → 10, 10_20 → 20, etc.）
+            const rangeMapping = {
+                '0_10': '10',
+                '10_20': '20',
+                '20_35': '35',
+                '35_40': '40',
+                '40_50': '50',
+                '50_55': '55',
+                '55_70': '70',
+                '70_100': '100'
+            };
+
+            const dbHeightRange = rangeMapping[heightRange];
+            if (!dbHeightRange) {
+                console.error('Invalid height range:', heightRange);
+                return;
+            }
+
+            // AJAX でサーバーに送信
+            fetch('{{ route('scheck.input-parameters.update-area') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        height_range: dbHeightRange,
+                        width: width > 0 ? width : null,
+                        height: height > 0 ? height : null
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log(`面積が保存されました: A${dbHeightRange} = ${data.area}`);
+                    } else {
+                        console.error('面積の保存に失敗しました:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('通信エラー:', error);
+                });
         }
 
         function submitInputParameters() {
@@ -214,16 +368,52 @@
                 const width = parseFloat(document.getElementById(`width_${range}`).value) || null;
                 const height = parseFloat(document.getElementById(`height_${range}`).value) || null;
 
-                if (width !== null) {
-                    data[`L${range.replace('_', '')}`] = width;
+                // カラム名の変換（0_10 → 10, 10_20 → 20, etc.）
+                const rangeMapping = {
+                    '0_10': '10',
+                    '10_20': '20',
+                    '20_35': '35',
+                    '35_40': '40',
+                    '40_50': '50',
+                    '50_55': '55',
+                    '55_70': '70',
+                    '70_100': '100'
+                };
+                const dbRange = rangeMapping[range];
+
+                // 幅の格納
+                if (width !== null && dbRange) {
+                    data[`L${dbRange}`] = width;
                 }
-                if (height !== null) {
-                    data[`H${range.replace('_', '')}`] = height;
+
+                // 高さの格納
+                if (height !== null && dbRange) {
+                    data[`H${dbRange}`] = height;
                 }
-                if (width !== null && height !== null) {
-                    data[`A${range.replace('_', '')}`] = width * height;
+
+                // 面積の格納
+                if (width !== null && height !== null && dbRange) {
+                    data[`A${dbRange}`] = width * height;
+                }
+
+                // 負荷荷重（Pbtm）の格納
+                const loadElement = document.getElementById(`load_${range}`);
+                console.log(`Range ${range}: loadElement =`, loadElement);
+                if (loadElement && dbRange) {
+                    console.log(`Range ${range}: textContent = "${loadElement.textContent}"`);
+                    if (loadElement.textContent !== '-') {
+                        const loadValue = parseFloat(loadElement.textContent);
+                        console.log(`Range ${range}: loadValue =`, loadValue);
+                        if (!isNaN(loadValue)) {
+                            data[`Pbtm${dbRange}`] = loadValue;
+                            console.log(`Range ${range}: Pbtm${dbRange} = ${loadValue}`);
+                        }
+                    }
                 }
             });
+
+            // デバッグ用：送信データをコンソールに出力
+            console.log('送信データ:', data);
 
             // フォームを作成して送信
             const form = document.createElement('form');

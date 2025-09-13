@@ -189,15 +189,20 @@ Route::get('/scheck/allowable-stress', function () {
 Route::post('/scheck/input-parameters', function (\Illuminate\Http\Request $request) {
     // 動的にバリデーションルールを作成
     $rules = [];
-    $heightRanges = ['010', '1020', '2035', '3540', '4050', '5055', '5570', '70100'];
+    $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
 
     foreach ($heightRanges as $range) {
         $rules["L{$range}"] = ['nullable', 'numeric', 'min:0', 'max:100'];
         $rules["H{$range}"] = ['nullable', 'numeric', 'min:0', 'max:100'];
         $rules["A{$range}"] = ['nullable', 'numeric', 'min:0', 'max:10000'];
+        $rules["Pbtm{$range}"] = ['nullable', 'numeric', 'min:0'];
     }
 
     $validated = $request->validate($rules);
+
+    // デバッグ用：受信データをログ出力
+    \Log::info('Input Parameters Received:', $request->all());
+    \Log::info('Validated Data:', $validated);
 
     $id = session('scheck_param_id');
     $param = $id ? \App\Models\ScheckParam::find($id) : null;
@@ -209,12 +214,53 @@ Route::post('/scheck/input-parameters', function (\Illuminate\Http\Request $requ
     $param->save();
     session(['scheck_param_id' => $param->id]);
 
+    // デバッグ用：保存後のデータをログ出力
+    \Log::info('Saved Param Data:', $param->toArray());
+
     return redirect()->route('scheck.input-confirmation');
 })->name('scheck.input-parameters.save');
 
 Route::get('/scheck/input-parameters', function () {
-    return view('scheck.input-parameters');
+    // セッションからパラメータIDを取得
+    $id = session('scheck_param_id');
+    $param = $id ? \App\Models\ScheckParam::find($id) : null;
+
+    return view('scheck.input-parameters', compact('param'));
 })->name('scheck.input-parameters');
+
+// リアルタイム面積計算保存
+Route::post('/scheck/input-parameters/update-area', function (\Illuminate\Http\Request $request) {
+    $validated = $request->validate([
+        'height_range' => ['required', 'string'],
+        'width' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        'height' => ['nullable', 'numeric', 'min:0', 'max:100'],
+    ]);
+
+    $id = session('scheck_param_id');
+    $param = $id ? \App\Models\ScheckParam::find($id) : null;
+    if (!$param) {
+        return response()->json(['error' => 'パラメータが見つかりません'], 404);
+    }
+
+    $heightRange = $validated['height_range'];
+    $width = $validated['width'];
+    $height = $validated['height'];
+
+    // 面積計算とAカラムへの保存
+    if ($width > 0 && $height > 0) {
+        $area = $width * $height;
+        $aColumn = "A{$heightRange}";
+        $param->{$aColumn} = $area;
+    } else {
+        // どちらかが0または空の場合はAカラムをクリア
+        $aColumn = "A{$heightRange}";
+        $param->{$aColumn} = null;
+    }
+
+    $param->save();
+
+    return response()->json(['success' => true, 'area' => $param->{$aColumn}]);
+})->name('scheck.input-parameters.update-area');
 
 Route::get('/scheck/input-confirmation', function () {
     // セッションからパラメータIDを取得
@@ -251,10 +297,11 @@ Route::post('/scheck/calculate', function (\Illuminate\Http\Request $request) {
             // 小数点第3位を切り上げ（小数点第2位まで表示）
             $vzValues[$vzKey] = ceil($vz * 100) / 100;
 
-            // QzN計算: Qz = 5/8 × Vz^2
+            // QzN計算: Qz = (5/8 × Vz^2) / 1000
             $qz = (5 / 8) * pow($vz, 2);
-            // 小数点第3位を切り上げ（小数点第2位まで表示）
-            $qzValues[$qzKey] = ceil($qz * 100) / 100;
+            // 1000で割って、小数点第3位を切り上げ（小数点第2位まで表示）
+            $qzFinal = $qz / 1000;
+            $qzValues[$qzKey] = ceil($qzFinal * 100) / 100;
         }
     }
 
