@@ -44,6 +44,10 @@ Route::get('/scheck/allowable-stress', function () {
     return view('scheck.allowable-stress');
 })->name('scheck.allowable-stress');
 
+Route::get('/scheck/input-parameters', function () {
+    return view('scheck.input-parameters');
+})->name('scheck.input-parameters');
+
 Route::get('/scheck/site', function () {
     return view('scheck.site');
 })->name('scheck.site');
