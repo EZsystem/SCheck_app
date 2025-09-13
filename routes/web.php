@@ -269,29 +269,33 @@ Route::post('/scheck/calculate', function (\Illuminate\Http\Request $request) {
         $fValues['Ftop'] = 1.0;
     }
 
-    // R値の計算とC1、C2の計算
-    $rValue = null;
+    // rの計算（r = 1 - phi）
+    if ($param->phi) {
+        $r = 1 - $param->phi;
+        $fValues['r'] = ceil($r * 100) / 100;
+    }
+
+    // R値の計算
+    $RValue = null;
 
     // 地上から建つ場合のR値計算
     if ($param->Lg && $param->Bg) {
         $ratio_LB = $param->Lg / $param->Bg;
         $rGround = 0.5813 + 0.013 * $ratio_LB - 0.0001 * pow($ratio_LB, 2);
-        $rValue = $rGround;
+        $RValue = $rGround;
     }
 
     // 空中にある場合のR値計算（地上の場合がない場合、または両方ある場合は空中を優先）
     if ($param->Ba && $param->Ha) {
         $ratio_H2B = ($param->Ha * 2) / $param->Ba;
         $rAerial = 0.5813 + 0.013 * $ratio_H2B - 0.001 * pow($ratio_H2B, 2);
-        $rValue = $rAerial;
+        $RValue = $rAerial;
     }
 
-    // C1とC2の計算（rValue、Co、Fbtm、Ftop が必要）
-    if ($rValue !== null && $param->Co && isset($fValues['Fbtm']) && isset($fValues['Ftop'])) {
-        // 基本計算式: (0.11 + 0.09 × r + 0.945 × Co × R)
-        $baseValue = 0.11 + (0.09 * $rValue) + (0.945 * $param->Co * $rValue);
-
+    // C1とC2の計算（r、Co、R、Fbtm、Ftop が必要）
+    if (isset($fValues['r']) && $param->Co && $RValue !== null && isset($fValues['Fbtm']) && isset($fValues['Ftop'])) {
         // C1 = (0.11 + 0.09 × r + 0.945 × Co × R) × Fbtm
+        $baseValue = 0.11 + (0.09 * $fValues['r']) + (0.945 * $param->Co * $RValue);
         $c1Value = $baseValue * $fValues['Fbtm'];
         $fValues['C1'] = ceil($c1Value * 100) / 100;
 
@@ -304,10 +308,19 @@ Route::post('/scheck/calculate', function (\Illuminate\Http\Request $request) {
         $fValues['Ra'] = $param->Ba && $param->Ha ? ceil($rAerial * 100) / 100 : null;
     }
 
+    // wall_tie_stress2の計算（wall_tie_stress2 = wall_tie_stress * War）
+    $wallTieStress2Values = [];
+    if ($param->wall_tie_stress && $param->War) {
+        $wallTieStress2 = $param->wall_tie_stress * $param->War;
+        // 小数点第3位を切り上げ（小数点第2位まで表示）
+        $wallTieStress2Values['wall_tie_stress2'] = ceil($wallTieStress2 * 100) / 100;
+    }
+
     // 計算結果をデータベースに保存
     $param->fill($vzValues);
     $param->fill($qzValues);
     $param->fill($fValues);
+    $param->fill($wallTieStress2Values);
     $param->save();
 
     // 計算結果画面にリダイレクト

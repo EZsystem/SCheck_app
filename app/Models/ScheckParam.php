@@ -38,6 +38,7 @@ class ScheckParam extends Model
         'Fbtm',
         'Ftop',
         'wall_tie_stress',
+        'wall_tie_stress2',
         'L10',
         'L20',
         'L35',

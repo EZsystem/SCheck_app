@@ -47,6 +47,7 @@ return new class extends Migration
             $table->float('Fbtm')->nullable();
             $table->float('Ftop')->nullable();
             $table->float('wall_tie_stress')->nullable();
+            $table->float('wall_tie_stress2')->nullable();
 
             $table->float('L10')->nullable();
             $table->float('L20')->nullable();
