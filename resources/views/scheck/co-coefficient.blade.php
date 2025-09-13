@@ -298,9 +298,35 @@
         }
 
         function confirmSelection() {
-            alert(`${selectedMaterial} で確定しました。\nφ = ${selectedPhi}\nCo = ${selectedCo}\n\n次の画面（単つなぎ許容応力入力）に進みます。`);
-            // 次の画面に遷移
-            window.location.href = '{{ route('scheck.allowable-stress') }}';
+            // Co値とphi値をサーバーに送信するフォームを作成
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route('scheck.co-coefficient.save') }}';
+
+            // CSRFトークンを追加
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            form.appendChild(csrfToken);
+
+            // Co値を追加
+            const coInput = document.createElement('input');
+            coInput.type = 'hidden';
+            coInput.name = 'Co';
+            coInput.value = selectedCo;
+            form.appendChild(coInput);
+
+            // phi値を追加
+            const phiInput = document.createElement('input');
+            phiInput.type = 'hidden';
+            phiInput.name = 'phi';
+            phiInput.value = selectedPhi;
+            form.appendChild(phiInput);
+
+            // フォームをページに追加して送信
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // 初期状態で「防音パネル」を選択状態にする

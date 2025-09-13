@@ -147,7 +147,7 @@
                 </button>
 
                 <button class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                    onclick="window.location.href='{{ route('scheck.input-parameters') }}'">
+                    onclick="submitSiteData()">
                     進む（値確定）
                 </button>
             </div>
@@ -184,6 +184,64 @@
             } else {
                 rAerialElement.textContent = '-';
             }
+        }
+
+        function submitSiteData() {
+            // 入力値を取得
+            const groundL = parseFloat(document.getElementById('ground_length').value) || null;
+            const groundB = parseFloat(document.getElementById('ground_width').value) || null;
+            const aerialB = parseFloat(document.getElementById('aerial_width').value) || null;
+            const aerialH = parseFloat(document.getElementById('aerial_height').value) || null;
+
+            // フォームを作成
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route('scheck.site.save') }}';
+
+            // CSRFトークンを追加
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            form.appendChild(csrfToken);
+
+            // 地上部のL→Lg, B→Bg
+            if (groundL !== null) {
+                const lgInput = document.createElement('input');
+                lgInput.type = 'hidden';
+                lgInput.name = 'Lg';
+                lgInput.value = groundL;
+                form.appendChild(lgInput);
+            }
+
+            if (groundB !== null) {
+                const bgInput = document.createElement('input');
+                bgInput.type = 'hidden';
+                bgInput.name = 'Bg';
+                bgInput.value = groundB;
+                form.appendChild(bgInput);
+            }
+
+            // 空中部のB→Ba, H→Ha
+            if (aerialB !== null) {
+                const baInput = document.createElement('input');
+                baInput.type = 'hidden';
+                baInput.name = 'Ba';
+                baInput.value = aerialB;
+                form.appendChild(baInput);
+            }
+
+            if (aerialH !== null) {
+                const haInput = document.createElement('input');
+                haInput.type = 'hidden';
+                haInput.name = 'Ha';
+                haInput.value = aerialH;
+                form.appendChild(haInput);
+            }
+
+            // フォームをページに追加して送信
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // ページ読み込み時に初期計算を実行

@@ -390,15 +390,28 @@
         }
 
         function confirmSelection() {
-            const infoText = selectedSpecification ?
-                `${selectedMaterialName} (${selectedSpecification})` :
-                selectedMaterialName;
+            // 許容荷重値をサーバーに送信するフォームを作成
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route('scheck.allowable-stress.save') }}';
 
-            alert(
-                `${infoText} で確定しました。\n許容荷重入力: ${selectedInputLoad} kN\n割増し: ${selectedMultiplier}\n許容荷重: ${selectedAllowableLoad}\n\n次の画面（現場パラメータ入力）に進みます。`
-            );
-            // 次の画面に遷移
-            window.location.href = '{{ route('scheck.site') }}';
+            // CSRFトークンを追加
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            form.appendChild(csrfToken);
+
+            // wall_tie_stress値を追加（許容荷重を使用）
+            const wallTieStressInput = document.createElement('input');
+            wallTieStressInput.type = 'hidden';
+            wallTieStressInput.name = 'wall_tie_stress';
+            wallTieStressInput.value = selectedAllowableLoad;
+            form.appendChild(wallTieStressInput);
+
+            // フォームをページに追加して送信
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // 初期状態で「単つなぎ本体」を選択状態にする

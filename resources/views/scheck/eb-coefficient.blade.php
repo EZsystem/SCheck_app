@@ -201,9 +201,28 @@
         }
 
         function confirmSelection() {
-            alert(`EB = ${selectedEB} (${selectedType}) で確定しました。\n\n次の画面（Eg係数入力）に進みます。`);
-            // 次の画面に遷移
-            window.location.href = '{{ route('scheck.eg-coefficient') }}';
+            // EB値をサーバーに送信するフォームを作成
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route('scheck.eb-coefficient.save') }}';
+
+            // CSRFトークンを追加
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            form.appendChild(csrfToken);
+
+            // EB値を追加
+            const ebInput = document.createElement('input');
+            ebInput.type = 'hidden';
+            ebInput.name = 'EB';
+            ebInput.value = selectedEB;
+            form.appendChild(ebInput);
+
+            // フォームをページに追加して送信
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // 初期状態で「近隣高層建築物無し」を選択状態にする

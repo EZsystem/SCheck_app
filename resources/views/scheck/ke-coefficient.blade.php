@@ -221,9 +221,28 @@
         }
 
         function confirmSelection() {
-            alert(`Ke = ${selectedKe} (${selectedRegion}) で確定しました。\n${selectedInfo}\n\n次の画面（EB係数入力）に進みます。`);
-            // 次の画面に遷移
-            window.location.href = '{{ route('scheck.eb-coefficient') }}';
+            // Ke値をサーバーに送信するフォームを作成
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route('scheck.ke-coefficient.save') }}';
+
+            // CSRFトークンを追加
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            form.appendChild(csrfToken);
+
+            // Ke値を追加
+            const keInput = document.createElement('input');
+            keInput.type = 'hidden';
+            keInput.name = 'Ke';
+            keInput.value = selectedKe;
+            form.appendChild(keInput);
+
+            // フォームをページに追加して送信
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // 初期状態で「その他」を選択状態にする

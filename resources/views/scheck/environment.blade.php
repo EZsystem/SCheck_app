@@ -248,6 +248,12 @@
                 </p>
             </div>
 
+            {{-- 保存フォーム（非表示） --}}
+            <form id="vo-save-form" action="{{ route('scheck.environment.save') }}" method="POST" class="hidden">
+                @csrf
+                <input type="hidden" name="Vo" id="input-vo" value="">
+            </form>
+
             {{-- ボタン群 --}}
             <div class="flex justify-between mt-8 mb-8">
                 <button
@@ -300,9 +306,9 @@
 
         function confirmSelection() {
             if (selectedVo) {
-                alert(`Vo = ${selectedVo} m/s で確定しました。\n${selectedInfo}\n\n次の画面（S係数入力）に進みます。`);
-                // 次の画面に遷移
-                window.location.href = '{{ route('scheck.s-coefficient') }}';
+                // フォームに値をセットして送信（保存後にサーバでリダイレクト）
+                document.getElementById('input-vo').value = selectedVo;
+                document.getElementById('vo-save-form').submit();
             }
         }
     </script>

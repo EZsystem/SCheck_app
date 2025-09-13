@@ -213,9 +213,22 @@
                     <p class="text-sm text-blue-700 dark:text-blue-300 mb-2">各高さ区分のS値:</p>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm" id="s-values-display">
                         <!-- JavaScript で動的に生成 -->
-                    </div>
-                </div>
             </div>
+        </div>
+    </div>
+
+            {{-- 保存フォーム（非表示） --}}
+            <form id="s-save-form" action="{{ route('scheck.s-coefficient.save') }}" method="POST" class="hidden">
+                @csrf
+                <input type="hidden" name="S10" id="input-S10">
+                <input type="hidden" name="S20" id="input-S20">
+                <input type="hidden" name="S35" id="input-S35">
+                <input type="hidden" name="S40" id="input-S40">
+                <input type="hidden" name="S50" id="input-S50">
+                <input type="hidden" name="S55" id="input-S55">
+                <input type="hidden" name="S70" id="input-S70">
+                <input type="hidden" name="S100" id="input-S100">
+            </form>
 
             {{-- ボタン群 --}}
             <div class="flex justify-between mt-8">
@@ -348,9 +361,24 @@
 
         function confirmSelection() {
             if (selectedColumn) {
-                alert(`地域分類 ${selectedColumn} (${regionNames[selectedColumn]}) で確定しました。\n\n次の画面（Ke係数入力）に進みます。`);
-                // 次の画面に遷移
-                window.location.href = '{{ route('scheck.ke-coefficient') }}';
+                // sValues から各区分の値をフォームへ設定
+                const map = {
+                    'S10': '0-10',
+                    'S20': '10-20',
+                    'S35': '20-35',
+                    'S40': '35-40',
+                    'S50': '40-50',
+                    'S55': '50-55',
+                    'S70': '55-70',
+                    'S100': '70-100',
+                };
+
+                Object.entries(map).forEach(([key, band]) => {
+                    const el = document.getElementById(`input-${key}`);
+                    el.value = sValues[band];
+                });
+
+                document.getElementById('s-save-form').submit();
             }
         }
     </script>

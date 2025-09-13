@@ -201,9 +201,28 @@
         }
 
         function confirmSelection() {
-            alert(`Eg = ${selectedEG} (${selectedType}) で確定しました。\n\n次の画面（Co係数入力）に進みます。`);
-            // 次の画面に遷移
-            window.location.href = '{{ route('scheck.co-coefficient') }}';
+            // Eg値をサーバーに送信するフォームを作成
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route('scheck.eg-coefficient.save') }}';
+
+            // CSRFトークンを追加
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            form.appendChild(csrfToken);
+
+            // Eg値を追加
+            const egInput = document.createElement('input');
+            egInput.type = 'hidden';
+            egInput.name = 'Eg';
+            egInput.value = selectedEG;
+            form.appendChild(egInput);
+
+            // フォームをページに追加して送信
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // 初期状態で「平坦・非傾斜地」を選択状態にする
