@@ -311,8 +311,22 @@
         }
 
         function executeCalculation() {
-            // 計算実行の処理（後で実装）
-            alert('計算を実行します。');
+            if (confirm('計算を実行しますか？')) {
+                // フォームを作成してPOSTリクエストを送信
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route('scheck.calculate') }}';
+
+                // CSRFトークンを追加
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                form.appendChild(csrfToken);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
         }
 
         // ESCキーでモーダルを閉じる

@@ -224,6 +224,108 @@ Route::get('/scheck/input-confirmation', function () {
     return view('scheck.input-confirmation', compact('param'));
 })->name('scheck.input-confirmation');
 
+// 計算実行
+Route::post('/scheck/calculate', function (\Illuminate\Http\Request $request) {
+    $id = session('scheck_param_id');
+    $param = $id ? \App\Models\ScheckParam::find($id) : null;
+
+    if (!$param) {
+        return redirect()->route('scheck.environment')->with('error', 'パラメータが見つかりません。最初からやり直してください。');
+    }
+
+    // Vz系列の計算（Vz = Vo × Ke × S × EB × Eg）
+    $vzValues = [];
+    $qzValues = [];
+    $fValues = [];
+
+    $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+
+    foreach ($heightRanges as $height) {
+        $sKey = "S{$height}";
+        $vzKey = "Vz{$height}";
+        $qzKey = "QzN{$height}";
+
+        // Vz計算: Vz = Vo × Ke × S × EB × Eg
+        if ($param->Vo && $param->Ke && $param->{$sKey} && $param->EB && $param->Eg) {
+            $vz = $param->Vo * $param->Ke * $param->{$sKey} * $param->EB * $param->Eg;
+            // 小数点第3位を切り上げ（小数点第2位まで表示）
+            $vzValues[$vzKey] = ceil($vz * 100) / 100;
+
+            // QzN計算: Qz = 5/8 × Vz^2
+            $qz = (5 / 8) * pow($vz, 2);
+            // 小数点第3位を切り上げ（小数点第2位まで表示）
+            $qzValues[$qzKey] = ceil($qz * 100) / 100;
+        }
+    }
+
+    // Fbtm と Ftop の計算
+    if ($param->phi) {
+        // Fbtm = (1.0 + 0.31 × phi)
+        $fbtm = 1.0 + (0.31 * $param->phi);
+        // 小数点第3位を切り上げ（小数点第2位まで表示）
+        $fValues['Fbtm'] = ceil($fbtm * 100) / 100;
+
+        // Ftop = 1
+        $fValues['Ftop'] = 1.0;
+    }
+
+    // R値の計算とC1、C2の計算
+    $rValue = null;
+
+    // 地上から建つ場合のR値計算
+    if ($param->Lg && $param->Bg) {
+        $ratio_LB = $param->Lg / $param->Bg;
+        $rGround = 0.5813 + 0.013 * $ratio_LB - 0.0001 * pow($ratio_LB, 2);
+        $rValue = $rGround;
+    }
+
+    // 空中にある場合のR値計算（地上の場合がない場合、または両方ある場合は空中を優先）
+    if ($param->Ba && $param->Ha) {
+        $ratio_H2B = ($param->Ha * 2) / $param->Ba;
+        $rAerial = 0.5813 + 0.013 * $ratio_H2B - 0.001 * pow($ratio_H2B, 2);
+        $rValue = $rAerial;
+    }
+
+    // C1とC2の計算（rValue、Co、Fbtm、Ftop が必要）
+    if ($rValue !== null && $param->Co && isset($fValues['Fbtm']) && isset($fValues['Ftop'])) {
+        // 基本計算式: (0.11 + 0.09 × r + 0.945 × Co × R)
+        $baseValue = 0.11 + (0.09 * $rValue) + (0.945 * $param->Co * $rValue);
+
+        // C1 = (0.11 + 0.09 × r + 0.945 × Co × R) × Fbtm
+        $c1Value = $baseValue * $fValues['Fbtm'];
+        $fValues['C1'] = ceil($c1Value * 100) / 100;
+
+        // C2 = (0.11 + 0.09 × r + 0.945 × Co × R) × Ftop
+        $c2Value = $baseValue * $fValues['Ftop'];
+        $fValues['C2'] = ceil($c2Value * 100) / 100;
+
+        // 計算に使用したR値も保存
+        $fValues['Rg'] = $param->Lg && $param->Bg ? ceil($rGround * 100) / 100 : null;
+        $fValues['Ra'] = $param->Ba && $param->Ha ? ceil($rAerial * 100) / 100 : null;
+    }
+
+    // 計算結果をデータベースに保存
+    $param->fill($vzValues);
+    $param->fill($qzValues);
+    $param->fill($fValues);
+    $param->save();
+
+    // 計算結果画面にリダイレクト
+    return redirect()->route('scheck.calculation-result')->with('success', '計算が完了しました。');
+})->name('scheck.calculate');
+
+// 計算結果画面
+Route::get('/scheck/calculation-result', function () {
+    $id = session('scheck_param_id');
+    $param = $id ? \App\Models\ScheckParam::find($id) : null;
+
+    if (!$param) {
+        return redirect()->route('scheck.environment')->with('error', 'パラメータが見つかりません。最初からやり直してください。');
+    }
+
+    return view('scheck.calculation-result', compact('param'));
+})->name('scheck.calculation-result');
+
 // 現場条件保存
 Route::post('/scheck/site', function (\Illuminate\Http\Request $request) {
     $validated = $request->validate([
