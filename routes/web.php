@@ -40,6 +40,10 @@ Route::get('/scheck/co-coefficient', function () {
     return view('scheck.co-coefficient');
 })->name('scheck.co-coefficient');
 
+Route::get('/scheck/allowable-stress', function () {
+    return view('scheck.allowable-stress');
+})->name('scheck.allowable-stress');
+
 Route::get('/scheck/site', function () {
     return view('scheck.site');
 })->name('scheck.site');

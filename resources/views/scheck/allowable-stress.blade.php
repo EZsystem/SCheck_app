@@ -1,28 +1,28 @@
-<x-layouts.app title="Co: コンクリート等の充実率（φと基本風力係数）">
+<x-layouts.app title="単つなぎ許容応力">
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-        <div class="max-w-4xl mx-auto pb-16">
+        <div class="max-w-6xl mx-auto pb-16">
             {{-- ヘッダー --}}
             <div class="mb-8">
                 <div class="flex items-center space-x-4 mb-4">
                     <button
                         class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        onclick="window.location.href='{{ route('scheck.eg-coefficient') }}'">
+                        onclick="window.location.href='{{ route('scheck.co-coefficient') }}'">
                         ← 前に戻る
                     </button>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                        Co: コンクリート等の充実率（φと基本風力係数）
+                        単つなぎ許容応力
                     </h1>
                 </div>
                 <p class="text-gray-600 dark:text-gray-400">
-                    該当する部材名を選択してください。行をクリックして選択します。
+                    該当する材料名を選択してください。行をクリックして選択します。
                 </p>
             </div>
 
-            {{-- Co係数選択テーブル --}}
+            {{-- 単つなぎ許容応力選択テーブル --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
                 <div class="p-6">
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        部材名を選択してください
+                        材料名を選択してください
                     </h2>
 
                     <div class="overflow-x-auto">
@@ -31,29 +31,38 @@
                                 <tr class="bg-gray-100 dark:bg-gray-700">
                                     <th
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
-                                        部材名
+                                        材料名
                                     </th>
                                     <th
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
                                         選択
                                     </th>
                                     <th
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                        φ
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">
+                                        規格
                                     </th>
                                     <th
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                        Co
+                                        許容荷重入力kN
+                                    </th>
+                                    <th
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                        割増し
+                                    </th>
+                                    <th
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                        許容荷重
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {{-- 防音パネル --}}
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer co-row"
-                                    onclick="selectCo('防音パネル', 1.00, 2.00)" id="row_soundproof_panel">
+                                {{-- 単つなぎ本体 --}}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer stress-row"
+                                    onclick="selectStress('単つなぎ本体', 'KS200 1000等', 4.41, 1.3, 5.733)"
+                                    id="row_main_body">
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                        防音パネル
+                                        単つなぎ本体
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
                                         <div
@@ -62,21 +71,29 @@
                                         </div>
                                     </td>
                                     <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        1.00
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
+                                        KS200 1000等
                                     </td>
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        2.00
+                                        4.41
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        1.3
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        5.733
                                     </td>
                                 </tr>
 
-                                {{-- 防水シート --}}
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer co-row"
-                                    onclick="selectCo('防水シート', 1.00, 2.00)" id="row_waterproof_sheet">
+                                {{-- 鉄骨クランプ（H形鋼用） --}}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer stress-row"
+                                    onclick="selectStress('鉄骨クランプ（H形鋼用）', '', 4.41, 1.3, 5.733)" id="row_steel_clamp">
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                        防水シート
+                                        鉄骨クランプ（H形鋼用）
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
                                         <div
@@ -85,21 +102,30 @@
                                         </div>
                                     </td>
                                     <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        1.00
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
+
                                     </td>
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        2.00
+                                        4.41
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        1.3
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        5.733
                                     </td>
                                 </tr>
 
-                                {{-- 防音シート --}}
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer co-row"
-                                    onclick="selectCo('防音シート', 1.00, 2.00)" id="row_soundproof_sheet">
+                                {{-- 鉄骨クランプ --}}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer stress-row"
+                                    onclick="selectStress('鉄骨クランプ', '直交型引張', 3.1, 1.3, 4.030)"
+                                    id="row_steel_clamp_tension">
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                        防音シート
+                                        鉄骨クランプ
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
                                         <div
@@ -108,21 +134,30 @@
                                         </div>
                                     </td>
                                     <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        1.00
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
+                                        直交型引張
                                     </td>
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        2.00
+                                        3.1
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        1.3
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        4.030
                                     </td>
                                 </tr>
 
-                                {{-- メッシュシート#1034 --}}
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer co-row"
-                                    onclick="selectCo('メッシュシート#1034', 0.90, 1.87)" id="row_mesh_1034">
+                                {{-- 鉄骨クランプ（直交型圧縮） --}}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer stress-row"
+                                    onclick="selectStress('鉄骨クランプ', '直交型圧縮', 4.4, 1.3, 5.720)"
+                                    id="row_steel_clamp_compression">
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                        メッシュシート#1034
+                                        鉄骨クランプ
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
                                         <div
@@ -131,21 +166,29 @@
                                         </div>
                                     </td>
                                     <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        0.90
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
+                                        直交型圧縮
                                     </td>
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        1.87
+                                        4.4
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        1.3
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        5.720
                                     </td>
                                 </tr>
 
-                                {{-- メッシュシート#2054 --}}
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer co-row"
-                                    onclick="selectCo('メッシュシート#2054', 0.71, 1.58)" id="row_mesh_2054">
+                                {{-- 直交クランプ --}}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer stress-row"
+                                    onclick="selectStress('直交クランプ', '', 4.9, 1.3, 6.370)" id="row_orthogonal_clamp">
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                        メッシュシート#2054
+                                        直交クランプ
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
                                         <div
@@ -154,21 +197,29 @@
                                         </div>
                                     </td>
                                     <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        0.71
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
+
                                     </td>
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        1.58
+                                        4.9
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        1.3
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        6.370
                                     </td>
                                 </tr>
 
-                                {{-- ネット@15mm --}}
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer co-row"
-                                    onclick="selectCo('ネット@15mm', 0.24, 0.39)" id="row_net_15mm">
+                                {{-- 自在クランプ --}}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer stress-row"
+                                    onclick="selectStress('自在クランプ', '', 3.43, 1.3, 4.459)" id="row_swivel_clamp">
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                        ネット@15mm
+                                        自在クランプ
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
                                         <div
@@ -177,21 +228,30 @@
                                         </div>
                                     </td>
                                     <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        0.24
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
+
                                     </td>
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        0.39
+                                        3.43
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        1.3
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        4.459
                                     </td>
                                 </tr>
 
-                                {{-- ネット@25mm --}}
-                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer co-row"
-                                    onclick="selectCo('ネット@25mm', 0.11, 0.16)" id="row_net_25mm">
+                                {{-- 金打ちアンカー --}}
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer stress-row"
+                                    onclick="selectStress('金打ちアンカー', 'W1/2 Rc=21 D=50', 3.75, 1, 3.750)"
+                                    id="row_anchor">
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                        ネット@25mm
+                                        後打ちアンカー
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
                                         <div
@@ -200,16 +260,32 @@
                                         </div>
                                     </td>
                                     <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        0.11
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white">
+                                        W1/2 Rc=21 D=50
                                     </td>
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        0.16
+                                        3.75
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        1
+                                    </td>
+                                    <td
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
+                                        3.750
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    {{-- 注意事項 --}}
+                    <div
+                        class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <p class="text-red-800 dark:text-red-200 text-sm font-medium">
+                            ※ 既設工事会認定品を使用の場合は割増し
+                        </p>
                     </div>
                 </div>
             </div>
@@ -217,14 +293,26 @@
             {{-- 選択結果表示 --}}
             <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mt-6" id="selection-result">
                 <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">選択結果</h3>
-                <p class="text-blue-800 dark:text-blue-200" id="selected-info">防音パネル</p>
-                <div class="grid grid-cols-2 gap-4 mt-3">
-                    <p class="text-xl font-bold text-blue-900 dark:text-blue-100">
-                        φ = <span id="selected-phi">1.00</span>
-                    </p>
-                    <p class="text-xl font-bold text-blue-900 dark:text-blue-100">
-                        Co = <span id="selected-co">2.00</span>
-                    </p>
+                <p class="text-blue-800 dark:text-blue-200" id="selected-info">単つなぎ本体 (KS200 1000等)</p>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-3">
+                    <div class="bg-white dark:bg-gray-700 p-3 rounded border">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">許容荷重入力</p>
+                        <p class="text-lg font-bold text-blue-900 dark:text-blue-100">
+                            <span id="selected-input-load">4.41</span> kN
+                        </p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-700 p-3 rounded border">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">割増し</p>
+                        <p class="text-lg font-bold text-blue-900 dark:text-blue-100">
+                            <span id="selected-multiplier">1.3</span>
+                        </p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-700 p-3 rounded border">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">許容荷重</p>
+                        <p class="text-lg font-bold text-blue-900 dark:text-blue-100">
+                            <span id="selected-allowable-load">5.733</span>
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -232,7 +320,7 @@
             <div class="flex justify-between mt-8 mb-8">
                 <button
                     class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                    onclick="window.location.href='{{ route('scheck.eg-coefficient') }}'">
+                    onclick="window.location.href='{{ route('scheck.co-coefficient') }}'">
                     戻る
                 </button>
 
@@ -246,14 +334,15 @@
 
     {{-- JavaScript --}}
     <script>
-        let selectedPhi = 1.00;
-        let selectedCo = 2.00;
-        let selectedMaterial = '防音パネル';
-        let selectedInfo = '防音パネル';
+        let selectedMaterialName = '単つなぎ本体';
+        let selectedSpecification = 'KS200 1000等';
+        let selectedInputLoad = 4.41;
+        let selectedMultiplier = 1.3;
+        let selectedAllowableLoad = 5.733;
 
-        function selectCo(material, phi, co) {
+        function selectStress(materialName, specification, inputLoad, multiplier, allowableLoad) {
             // 全ての行のハイライトをリセット
-            document.querySelectorAll('.co-row').forEach(row => {
+            document.querySelectorAll('.stress-row').forEach(row => {
                 row.classList.remove('bg-blue-100', 'dark:bg-blue-900');
             });
 
@@ -265,13 +354,13 @@
             });
 
             // 全ての選択ボタンをリセット
-            document.querySelectorAll('.co-row td:nth-child(2) div').forEach(btn => {
+            document.querySelectorAll('.stress-row td:nth-child(2) div').forEach(btn => {
                 btn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
                 btn.classList.add('border-2', 'border-blue-500', 'hover:bg-blue-100', 'dark:hover:bg-blue-900');
             });
 
             // 選択された行をハイライト
-            const selectedRow = event.target.closest('.co-row');
+            const selectedRow = event.target.closest('.stress-row');
             selectedRow.classList.add('bg-blue-100', 'dark:bg-blue-900');
 
             // 選択された行の選択マークを表示
@@ -286,27 +375,36 @@
             selectedMark.classList.remove('text-blue-500');
 
             // 選択結果を保存
-            selectedPhi = phi;
-            selectedCo = co;
-            selectedMaterial = material;
-            selectedInfo = material;
+            selectedMaterialName = materialName;
+            selectedSpecification = specification;
+            selectedInputLoad = inputLoad;
+            selectedMultiplier = multiplier;
+            selectedAllowableLoad = allowableLoad;
 
             // 結果表示を更新
-            document.getElementById('selected-phi').textContent = phi;
-            document.getElementById('selected-co').textContent = co;
-            document.getElementById('selected-info').textContent = material;
+            const infoText = specification ? `${materialName} (${specification})` : materialName;
+            document.getElementById('selected-info').textContent = infoText;
+            document.getElementById('selected-input-load').textContent = inputLoad;
+            document.getElementById('selected-multiplier').textContent = multiplier;
+            document.getElementById('selected-allowable-load').textContent = allowableLoad;
         }
 
         function confirmSelection() {
-            alert(`${selectedMaterial} で確定しました。\nφ = ${selectedPhi}\nCo = ${selectedCo}\n\n次の画面（単つなぎ許容応力入力）に進みます。`);
+            const infoText = selectedSpecification ?
+                `${selectedMaterialName} (${selectedSpecification})` :
+                selectedMaterialName;
+
+            alert(
+                `${infoText} で確定しました。\n許容荷重入力: ${selectedInputLoad} kN\n割増し: ${selectedMultiplier}\n許容荷重: ${selectedAllowableLoad}\n\n次の画面（サイト情報入力）に進みます。`
+            );
             // 次の画面に遷移
-            window.location.href = '{{ route('scheck.allowable-stress') }}';
+            window.location.href = '{{ route('scheck.site') }}';
         }
 
-        // 初期状態で「防音パネル」を選択状態にする
+        // 初期状態で「単つなぎ本体」を選択状態にする
         window.addEventListener('DOMContentLoaded', function() {
             // 初期選択状態として最初の行を青色でハイライト
-            document.getElementById('row_soundproof_panel').classList.add('bg-blue-100', 'dark:bg-blue-900');
+            document.getElementById('row_main_body').classList.add('bg-blue-100', 'dark:bg-blue-900');
         });
     </script>
 </x-layouts.app>
