@@ -6,7 +6,7 @@
                 <div class="flex items-center space-x-4 mb-4">
                     <button
                         class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        onclick="window.location.href='{{ route('scheck.allowable-stress') }}'">
+                        onclick="window.location.href='{{ route('scheck.site') }}'">
                         ← 前に戻る
                     </button>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
@@ -165,7 +165,7 @@
             <div class="flex justify-between mt-8 mb-8">
                 <button
                     class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                    onclick="window.location.href='{{ route('scheck.allowable-stress') }}'">
+                    onclick="window.location.href='{{ route('scheck.site') }}'">
                     戻る
                 </button>
 
@@ -330,8 +330,21 @@
 
             alert(summary);
 
-            // 次の画面に遷移（サイト情報画面）
-            window.location.href = '{{ route('scheck.site') }}';
+            // 入力値をURLパラメータとして確認画面に渡す
+            const params = new URLSearchParams({
+                l1: inputValues.l1,
+                h1: inputValues.h1,
+                a1: inputValues.a1.toFixed(2),
+                l2: inputValues.l2,
+                h2_upper: inputValues.h2_upper,
+                h2_lower: inputValues.h2_lower,
+                a2_upper: inputValues.a2_upper.toFixed(2),
+                a2_lower: inputValues.a2_lower.toFixed(2),
+                war: inputValues.war
+            });
+
+            // 次の画面に遷移（入力値確認画面）
+            window.location.href = '{{ route('scheck.input-confirmation') }}?' + params.toString();
         }
     </script>
 </x-layouts.app>

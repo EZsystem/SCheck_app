@@ -10,7 +10,7 @@
                         ← 前に戻る
                     </button>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                        Co: コンクリート等の充実率（φと基本風力係数）
+                        Co: シート等の充実率（φと基本風力係数）
                     </h1>
                 </div>
                 <p class="text-gray-600 dark:text-gray-400">

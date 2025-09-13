@@ -48,6 +48,10 @@ Route::get('/scheck/input-parameters', function () {
     return view('scheck.input-parameters');
 })->name('scheck.input-parameters');
 
+Route::get('/scheck/input-confirmation', function () {
+    return view('scheck.input-confirmation');
+})->name('scheck.input-confirmation');
+
 Route::get('/scheck/site', function () {
     return view('scheck.site');
 })->name('scheck.site');

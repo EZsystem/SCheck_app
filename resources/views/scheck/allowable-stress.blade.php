@@ -398,7 +398,7 @@
                 `${infoText} で確定しました。\n許容荷重入力: ${selectedInputLoad} kN\n割増し: ${selectedMultiplier}\n許容荷重: ${selectedAllowableLoad}\n\n次の画面（現場パラメータ入力）に進みます。`
             );
             // 次の画面に遷移
-            window.location.href = '{{ route('scheck.input-parameters') }}';
+            window.location.href = '{{ route('scheck.site') }}';
         }
 
         // 初期状態で「単つなぎ本体」を選択状態にする

@@ -6,7 +6,7 @@
                 <div class="flex items-center space-x-4 mb-4">
                     <button
                         class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        onclick="window.location.href='{{ route('scheck.environment') }}'">
+                        onclick="window.location.href='{{ route('scheck.allowable-stress') }}'">
                         ← 戻る
                     </button>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
@@ -142,12 +142,12 @@
             <div class="flex justify-between mt-8">
                 <button
                     class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                    onclick="window.location.href='{{ route('scheck.environment') }}'">
+                    onclick="window.location.href='{{ route('scheck.allowable-stress') }}'">
                     戻る
                 </button>
 
                 <button class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                    onclick="alert('次の画面への遷移は準備中です')">
+                    onclick="window.location.href='{{ route('scheck.input-parameters') }}'">
                     進む（値確定）
                 </button>
             </div>
