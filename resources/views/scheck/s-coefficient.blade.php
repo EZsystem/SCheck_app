@@ -348,9 +348,9 @@
 
         function confirmSelection() {
             if (selectedColumn) {
-                alert(`地域分類 ${selectedColumn} (${regionNames[selectedColumn]}) で確定しました。\n\n次の画面（現場パラメータ入力）に進みます。`);
+                alert(`地域分類 ${selectedColumn} (${regionNames[selectedColumn]}) で確定しました。\n\n次の画面（Ke係数入力）に進みます。`);
                 // 次の画面に遷移
-                window.location.href = '{{ route('scheck.site') }}';
+                window.location.href = '{{ route('scheck.ke-coefficient') }}';
             }
         }
     </script>

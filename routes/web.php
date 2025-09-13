@@ -24,6 +24,18 @@ Route::get('/scheck/s-coefficient', function () {
     return view('scheck.s-coefficient');
 })->name('scheck.s-coefficient');
 
+Route::get('/scheck/ke-coefficient', function () {
+    return view('scheck.ke-coefficient');
+})->name('scheck.ke-coefficient');
+
+Route::get('/scheck/eb-coefficient', function () {
+    return view('scheck.eb-coefficient');
+})->name('scheck.eb-coefficient');
+
+Route::get('/scheck/eg-coefficient', function () {
+    return view('scheck.eg-coefficient');
+})->name('scheck.eg-coefficient');
+
 Route::get('/scheck/site', function () {
     return view('scheck.site');
 })->name('scheck.site');
