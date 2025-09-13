@@ -20,6 +20,10 @@ Route::get('/scheck/environment', function () {
     return view('scheck.environment');
 })->name('scheck.environment');
 
+Route::get('/scheck/s-coefficient', function () {
+    return view('scheck.s-coefficient');
+})->name('scheck.s-coefficient');
+
 Route::get('/scheck/site', function () {
     return view('scheck.site');
 })->name('scheck.site');

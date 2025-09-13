@@ -1,6 +1,6 @@
 <x-layouts.app title="Vo: 基準風速">
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-        <div class="max-w-4xl mx-auto">
+        <div class="max-w-4xl mx-auto pb-16">
             {{-- ヘッダー --}}
             <div class="mb-8">
                 <div class="flex items-center space-x-4 mb-4">
@@ -249,7 +249,7 @@
             </div>
 
             {{-- ボタン群 --}}
-            <div class="flex justify-between mt-8">
+            <div class="flex justify-between mt-8 mb-8">
                 <button
                     class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     onclick="window.location.href='{{ route('scheck.index') }}'">
@@ -300,9 +300,9 @@
 
         function confirmSelection() {
             if (selectedVo) {
-                alert(`Vo = ${selectedVo} m/s で確定しました。\n${selectedInfo}\n\n次の画面（現場パラメータ入力）に進みます。`);
+                alert(`Vo = ${selectedVo} m/s で確定しました。\n${selectedInfo}\n\n次の画面（S係数入力）に進みます。`);
                 // 次の画面に遷移
-                window.location.href = '{{ route('scheck.site') }}';
+                window.location.href = '{{ route('scheck.s-coefficient') }}';
             }
         }
     </script>
