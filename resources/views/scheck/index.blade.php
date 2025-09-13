@@ -27,7 +27,7 @@
                     {{-- メインボタン --}}
                     <button
                         class="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-lg transition-colors duration-200 mb-4"
-                        onclick="alert('計算開始機能は準備中です')">
+                        onclick="window.location.href='{{ route('scheck.environment') }}'">
                         計算を開始する
                     </button>
 

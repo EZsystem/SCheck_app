@@ -11,12 +11,18 @@ Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-// 構造計算システム
-Route::middleware(['auth'])->group(function () {
-    Route::get('/scheck', function () {
-        return view('scheck.index');
-    })->name('scheck.index');
-});
+// 構造計算システム（テスト用：認証無効）
+Route::get('/scheck', function () {
+    return view('scheck.index');
+})->name('scheck.index');
+
+Route::get('/scheck/environment', function () {
+    return view('scheck.environment');
+})->name('scheck.environment');
+
+Route::get('/scheck/site', function () {
+    return view('scheck.site');
+})->name('scheck.site');
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
