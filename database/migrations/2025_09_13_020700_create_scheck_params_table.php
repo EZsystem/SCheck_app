@@ -93,6 +93,26 @@ return new class extends Migration
             $table->float('QzN70')->nullable();
             $table->float('QzN100')->nullable();
 
+            $table->float('r')->nullable();
+
+            $table->float('Pbtm10')->nullable();
+            $table->float('Pbtm20')->nullable();
+            $table->float('Pbtm35')->nullable();
+            $table->float('Pbtm40')->nullable();
+            $table->float('Pbtm50')->nullable();
+            $table->float('Pbtm55')->nullable();
+            $table->float('Pbtm70')->nullable();
+            $table->float('Pbtm100')->nullable();
+
+            $table->float('Ptop10')->nullable();
+            $table->float('Ptop20')->nullable();
+            $table->float('Ptop35')->nullable();
+            $table->float('Ptop40')->nullable();
+            $table->float('Ptop50')->nullable();
+            $table->float('Ptop55')->nullable();
+            $table->float('Ptop70')->nullable();
+            $table->float('Ptop100')->nullable();
+
             $table->float('Ltop')->nullable();
             $table->float('htop1')->nullable();
             $table->float('htop2')->nullable();
