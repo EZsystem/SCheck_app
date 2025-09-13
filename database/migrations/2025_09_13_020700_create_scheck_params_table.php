@@ -41,8 +41,6 @@ return new class extends Migration
 
             $table->float('Co')->nullable();
             $table->float('phi')->nullable();
-            $table->float('Vz')->nullable();
-            $table->float('QzN')->nullable();
             $table->float('C')->nullable();
             $table->float('C1')->nullable();
             $table->float('C2')->nullable();
@@ -77,6 +75,24 @@ return new class extends Migration
             $table->float('A70')->nullable();
             $table->float('A100')->nullable();
 
+            $table->float('Vz10')->nullable();
+            $table->float('Vz20')->nullable();
+            $table->float('Vz35')->nullable();
+            $table->float('Vz40')->nullable();
+            $table->float('Vz50')->nullable();
+            $table->float('Vz55')->nullable();
+            $table->float('Vz70')->nullable();
+            $table->float('Vz100')->nullable();
+
+            $table->float('QzN10')->nullable();
+            $table->float('QzN20')->nullable();
+            $table->float('QzN35')->nullable();
+            $table->float('QzN40')->nullable();
+            $table->float('QzN50')->nullable();
+            $table->float('QzN55')->nullable();
+            $table->float('QzN70')->nullable();
+            $table->float('QzN100')->nullable();
+
             $table->float('Ltop')->nullable();
             $table->float('htop1')->nullable();
             $table->float('htop2')->nullable();
@@ -97,4 +113,3 @@ return new class extends Migration
         Schema::dropIfExists('scheck_params');
     }
 };
-
