@@ -134,7 +134,7 @@
 
                 <button class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                     onclick="submitInputParameters()">
-                    進む（値確定）
+                    計算結果を表示
                 </button>
             </div>
         </div>

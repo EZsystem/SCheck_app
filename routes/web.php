@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Log;
 use Livewire\Volt\Volt;
 
 Route::get('/', function () {
@@ -201,8 +202,8 @@ Route::post('/scheck/input-parameters', function (\Illuminate\Http\Request $requ
     $validated = $request->validate($rules);
 
     // デバッグ用：受信データをログ出力
-    \Log::info('Input Parameters Received:', $request->all());
-    \Log::info('Validated Data:', $validated);
+    Log::info('Input Parameters Received:', $request->all());
+    Log::info('Validated Data:', $validated);
 
     $id = session('scheck_param_id');
     $param = $id ? \App\Models\ScheckParam::find($id) : null;
@@ -215,9 +216,9 @@ Route::post('/scheck/input-parameters', function (\Illuminate\Http\Request $requ
     session(['scheck_param_id' => $param->id]);
 
     // デバッグ用：保存後のデータをログ出力
-    \Log::info('Saved Param Data:', $param->toArray());
+    Log::info('Saved Param Data:', $param->toArray());
 
-    return redirect()->route('scheck.input-confirmation');
+    return redirect()->route('scheck.wind-pressure-result');
 })->name('scheck.input-parameters.save');
 
 Route::get('/scheck/input-parameters', function () {
@@ -411,6 +412,19 @@ Route::post('/scheck/site', function (\Illuminate\Http\Request $request) {
 Route::get('/scheck/site', function () {
     return view('scheck.site');
 })->name('scheck.site');
+
+// 風圧力計算結果表示ページ
+Route::get('/scheck/wind-pressure-result', function () {
+    // セッションからパラメータIDを取得
+    $id = session('scheck_param_id');
+    $param = $id ? \App\Models\ScheckParam::find($id) : null;
+
+    if (!$param) {
+        return redirect()->route('scheck.environment')->with('error', 'パラメータが見つかりません。最初からやり直してください。');
+    }
+
+    return view('scheck.wind-pressure-result', compact('param'));
+})->name('scheck.wind-pressure-result');
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
