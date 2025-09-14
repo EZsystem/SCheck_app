@@ -63,9 +63,9 @@
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
                                         <button
-                                            class="w-8 h-8 rounded-full border-2 border-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                                            class="w-8 h-8 rounded-full border-2 border-blue-500 bg-blue-500 hover:bg-blue-600 transition-colors"
                                             onclick="selectVo(16, '東北', '福島県（白河市、須賀川市、岩瀬郡、西白河郡）')" id="btn_16_1">
-                                            <span class="hidden text-blue-500 text-xs">○</span>
+                                            <span class="text-white text-xs">○</span>
                                         </button>
                                     </td>
                                     <td
@@ -121,8 +121,7 @@
                                 </tr>
 
                                 {{-- 18 岩手県全域 --}}
-                                <tr
-                                    class="bg-yellow-100 dark:bg-yellow-900/20 hover:bg-yellow-200 dark:hover:bg-yellow-900/30">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                                     <td
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
 
@@ -133,9 +132,9 @@
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center">
                                         <button
-                                            class="w-8 h-8 rounded-full border-2 border-blue-500 bg-blue-500 hover:bg-blue-600 transition-colors"
+                                            class="w-8 h-8 rounded-full border-2 border-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
                                             onclick="selectVo(18, '', '岩手県全域')" id="btn_18_3">
-                                            <span class="text-white text-xs">○</span>
+                                            <span class="hidden text-blue-500 text-xs">○</span>
                                         </button>
                                     </td>
                                     <td
@@ -311,5 +310,20 @@
                 document.getElementById('vo-save-form').submit();
             }
         }
+
+        // ページ読み込み時に福島県をデフォルト選択
+        window.addEventListener('DOMContentLoaded', function() {
+            // 福島県を自動選択
+            selectedVo = 16;
+            selectedInfo = '東北 - 福島県（白河市、須賀川市、岩瀬郡、西白河郡）';
+
+            // 結果表示を更新
+            document.getElementById('selected-vo').textContent = selectedVo;
+            document.getElementById('selected-info').textContent = selectedInfo;
+            document.getElementById('selection-result').style.display = 'block';
+
+            // 確定ボタンを有効化
+            document.getElementById('confirm-btn').disabled = false;
+        });
     </script>
 </x-layouts.app>

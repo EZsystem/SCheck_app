@@ -4,6 +4,10 @@
             {{-- ヘッダー --}}
             <div class="mb-8">
                 <div class="flex items-center space-x-4 mb-4">
+                    <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                        onclick="window.location.href='{{ route('scheck.index') }}'">
+                        🏠 トップ
+                    </button>
                     <button
                         class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                         onclick="window.location.href='{{ route('scheck.environment') }}'">
@@ -213,9 +217,9 @@
                     <p class="text-sm text-blue-700 dark:text-blue-300 mb-2">各高さ区分のS値:</p>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm" id="s-values-display">
                         <!-- JavaScript で動的に生成 -->
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
 
             {{-- 保存フォーム（非表示） --}}
             <form id="s-save-form" action="{{ route('scheck.s-coefficient.save') }}" method="POST" class="hidden">

@@ -4,6 +4,10 @@
             {{-- ヘッダー --}}
             <div class="mb-8">
                 <div class="flex items-center space-x-4 mb-4">
+                    <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                        onclick="window.location.href='{{ route('scheck.index') }}'">
+                        🏠 トップ
+                    </button>
                     <button
                         class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                         onclick="window.location.href='{{ route('scheck.co-coefficient') }}'">
