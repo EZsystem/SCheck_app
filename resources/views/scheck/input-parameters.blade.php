@@ -22,6 +22,19 @@
                 </p>
             </div>
 
+            {{-- 最終値取得ボタン --}}
+            <div class="mb-6">
+                <button type="button"
+                    class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+                    onclick="loadLastInputValues()">
+                    <span>📥</span>
+                    <span>最終値を一括取得</span>
+                </button>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    過去に入力された幅・高さの値を一括で取得して入力フィールドに設定します
+                </p>
+            </div>
+
             {{-- 風圧力計算テーブル --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
                 <div class="overflow-x-auto">
@@ -445,6 +458,103 @@
             // フォームをページに追加して送信
             document.body.appendChild(form);
             form.submit();
+        }
+
+        // 最終値を取得する関数
+        async function loadLastInputValues() {
+            try {
+                const response = await fetch('/scheck/input-parameters/get-last-values', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('データの取得に失敗しました');
+                }
+
+                const data = await response.json();
+
+                // 高さ範囲のマッピング（データベース → 画面表示）
+                const rangeMapping = {
+                    '10': '0_10',
+                    '20': '10_20',
+                    '35': '20_35',
+                    '40': '35_40',
+                    '50': '40_50',
+                    '55': '50_55',
+                    '70': '55_70',
+                    '100': '70_100'
+                };
+
+                let updatedCount = 0;
+
+                // L系列（幅）の値を設定
+                Object.keys(data.widths || {}).forEach(dbRange => {
+                    const screenRange = rangeMapping[dbRange];
+                    if (screenRange && data.widths[dbRange] !== null) {
+                        const widthInput = document.getElementById(`width_${screenRange}`);
+                        if (widthInput) {
+                            widthInput.value = data.widths[dbRange];
+                            updatedCount++;
+                        }
+                    }
+                });
+
+                // H系列（高さ）の値を設定
+                Object.keys(data.heights || {}).forEach(dbRange => {
+                    const screenRange = rangeMapping[dbRange];
+                    if (screenRange && data.heights[dbRange] !== null) {
+                        const heightInput = document.getElementById(`height_${screenRange}`);
+                        if (heightInput) {
+                            heightInput.value = data.heights[dbRange];
+                            updatedCount++;
+                        }
+                    }
+                });
+
+                // 値を設定後に各行の計算を実行
+                Object.values(rangeMapping).forEach(screenRange => {
+                    calculateRow(screenRange);
+                });
+
+                // 成功メッセージを表示
+                showInputMessage(`最終値を取得しました（${updatedCount}個のフィールドを更新）`, 'success');
+
+            } catch (error) {
+                console.error('Error:', error);
+                showInputMessage('最終値の取得に失敗しました: ' + error.message, 'error');
+            }
+        }
+
+        // メッセージ表示関数
+        function showInputMessage(message, type) {
+            // 既存のメッセージがあれば削除
+            const existingMessage = document.querySelector('.input-message-toast');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            // メッセージ要素を作成
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `input-message-toast fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-red-600 text-white'
+            }`;
+            messageDiv.textContent = message;
+
+            // ページに追加
+            document.body.appendChild(messageDiv);
+
+            // 4秒後に自動削除
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 4000);
         }
     </script>
 </x-layouts.app>

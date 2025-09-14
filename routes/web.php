@@ -229,6 +229,59 @@ Route::get('/scheck/input-parameters', function () {
     return view('scheck.input-parameters', compact('param'));
 })->name('scheck.input-parameters');
 
+// input-parameters 最終値取得API
+Route::get('/scheck/input-parameters/get-last-values', function () {
+    // 現在のセッションのレコードIDを取得
+    $currentId = session('scheck_param_id');
+
+    // 現在のレコード以外で最新のレコードを取得（L系列またはH系列のいずれかが入力されているもの）
+    $lastParam = \App\Models\ScheckParam::where(function ($query) {
+        $query->whereNotNull('L10')->orWhereNotNull('L20')->orWhereNotNull('L35')->orWhereNotNull('L40')
+            ->orWhereNotNull('L50')->orWhereNotNull('L55')->orWhereNotNull('L70')->orWhereNotNull('L100')
+            ->orWhereNotNull('H10')->orWhereNotNull('H20')->orWhereNotNull('H35')->orWhereNotNull('H40')
+            ->orWhereNotNull('H50')->orWhereNotNull('H55')->orWhereNotNull('H70')->orWhereNotNull('H100');
+    })
+        ->when($currentId, function ($query, $currentId) {
+            return $query->where('id', '!=', $currentId);
+        })
+        ->orderBy('id', 'desc')
+        ->first();
+
+    if (!$lastParam) {
+        return response()->json([
+            'widths' => [],
+            'heights' => [],
+            'message' => '過去のデータが見つかりませんでした'
+        ]);
+    }
+
+    // L系列（幅）の値を取得
+    $widths = [];
+    $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+
+    foreach ($heightRanges as $range) {
+        $lValue = $lastParam->{"L{$range}"};
+        if ($lValue !== null) {
+            $widths[$range] = $lValue;
+        }
+    }
+
+    // H系列（高さ）の値を取得
+    $heights = [];
+    foreach ($heightRanges as $range) {
+        $hValue = $lastParam->{"H{$range}"};
+        if ($hValue !== null) {
+            $heights[$range] = $hValue;
+        }
+    }
+
+    return response()->json([
+        'widths' => $widths,
+        'heights' => $heights,
+        'message' => '最終値を取得しました'
+    ]);
+})->name('scheck.input-parameters.get-last-values');
+
 // リアルタイム面積計算保存
 Route::post('/scheck/input-parameters/update-area', function (\Illuminate\Http\Request $request) {
     $validated = $request->validate([
@@ -412,6 +465,43 @@ Route::post('/scheck/site', function (\Illuminate\Http\Request $request) {
 Route::get('/scheck/site', function () {
     return view('scheck.site');
 })->name('scheck.site');
+
+// 最終値取得API
+Route::get('/scheck/site/get-last-values', function () {
+    // 現在のセッションのレコードIDを取得
+    $currentId = session('scheck_param_id');
+
+    // 現在のレコード以外で最新のレコードを取得（Lg, Bg, Ba, Haのいずれかが入力されているもの）
+    $lastParam = \App\Models\ScheckParam::where(function ($query) {
+        $query->whereNotNull('Lg')
+            ->orWhereNotNull('Bg')
+            ->orWhereNotNull('Ba')
+            ->orWhereNotNull('Ha');
+    })
+        ->when($currentId, function ($query, $currentId) {
+            return $query->where('id', '!=', $currentId);
+        })
+        ->orderBy('id', 'desc')
+        ->first();
+
+    if (!$lastParam) {
+        return response()->json([
+            'Lg' => null,
+            'Bg' => null,
+            'Ba' => null,
+            'Ha' => null,
+            'message' => '過去のデータが見つかりませんでした'
+        ]);
+    }
+
+    return response()->json([
+        'Lg' => $lastParam->Lg,
+        'Bg' => $lastParam->Bg,
+        'Ba' => $lastParam->Ba,
+        'Ha' => $lastParam->Ha,
+        'message' => '最終値を取得しました'
+    ]);
+})->name('scheck.site.get-last-values');
 
 // 風圧力計算結果表示ページ
 Route::get('/scheck/wind-pressure-result', function () {

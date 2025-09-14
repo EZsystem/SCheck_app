@@ -102,5 +102,23 @@ class ScheckParam extends Model
         'atop1',
         'atop2',
         'War',
+        // W上の値（各高さ範囲のA行）
+        'Wup10',
+        'Wup20',
+        'Wup35',
+        'Wup40',
+        'Wup50',
+        'Wup55',
+        'Wup70',
+        'Wup100',
+        // W下の値（各高さ範囲のB行）
+        'Wdn10',
+        'Wdn20',
+        'Wdn35',
+        'Wdn40',
+        'Wdn50',
+        'Wdn55',
+        'Wdn70',
+        'Wdn100',
     ];
 }

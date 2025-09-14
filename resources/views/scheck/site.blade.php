@@ -75,6 +75,15 @@
                                             </div>
                                         </div>
 
+                                        {{-- 最終値取得ボタン --}}
+                                        <div class="mb-4">
+                                            <button type="button"
+                                                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm"
+                                                onclick="loadLastValues('ground')">
+                                                📥 最終値を取得
+                                            </button>
+                                        </div>
+
                                         <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
                                             <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">計算結果</div>
                                             <div class="text-3xl font-bold text-green-600 dark:text-green-400"
@@ -121,6 +130,15 @@
                                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                                                     oninput="calculateR()" />
                                             </div>
+                                        </div>
+
+                                        {{-- 最終値取得ボタン --}}
+                                        <div class="mb-4">
+                                            <button type="button"
+                                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm"
+                                                onclick="loadLastValues('aerial')">
+                                                📥 最終値を取得
+                                            </button>
                                         </div>
 
                                         <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
@@ -246,6 +264,81 @@
             // フォームをページに追加して送信
             document.body.appendChild(form);
             form.submit();
+        }
+
+        // 最終値を取得する関数
+        async function loadLastValues(type) {
+            try {
+                const response = await fetch('/scheck/site/get-last-values', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('データの取得に失敗しました');
+                }
+
+                const data = await response.json();
+
+                if (type === 'ground') {
+                    // 地上L（Lg）と地上B（Bg）に値を設定
+                    if (data.Lg !== null) {
+                        document.getElementById('ground_length').value = data.Lg;
+                    }
+                    if (data.Bg !== null) {
+                        document.getElementById('ground_width').value = data.Bg;
+                    }
+                } else if (type === 'aerial') {
+                    // 空中B（Ba）と空中H（Ha）に値を設定
+                    if (data.Ba !== null) {
+                        document.getElementById('aerial_width').value = data.Ba;
+                    }
+                    if (data.Ha !== null) {
+                        document.getElementById('aerial_height').value = data.Ha;
+                    }
+                }
+
+                // 値を設定後にR値を再計算
+                calculateR();
+
+                // 成功メッセージを表示
+                showMessage('最終値を取得しました', 'success');
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('最終値の取得に失敗しました: ' + error.message, 'error');
+            }
+        }
+
+        // メッセージ表示関数
+        function showMessage(message, type) {
+            // 既存のメッセージがあれば削除
+            const existingMessage = document.querySelector('.message-toast');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            // メッセージ要素を作成
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message-toast fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-red-600 text-white'
+            }`;
+            messageDiv.textContent = message;
+
+            // ページに追加
+            document.body.appendChild(messageDiv);
+
+            // 3秒後に自動削除
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 3000);
         }
 
         // ページ読み込み時に初期計算を実行
