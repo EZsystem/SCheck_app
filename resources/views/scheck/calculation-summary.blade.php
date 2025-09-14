@@ -77,7 +77,7 @@
             </div>
 
             {{-- 【一般部】足場に作用する風圧力Ｐ（kN） --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-6">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-6 break-inside-avoid">
                 <div class="p-6 pb-0">
                     <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">【一般部】足場に作用する風圧力Ｐ（kN）</h2>
                 </div>
@@ -206,7 +206,7 @@
             </div>
 
             {{-- 【突出部】足場に作用する風圧力Ｐ（kN） --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-6">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-6 break-inside-avoid">
                 <div class="p-6 pb-0">
                     <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4">【突出部】足場に作用する風圧力Ｐ（kN）</h2>
                 </div>
@@ -419,10 +419,49 @@
     {{-- 印刷用スタイル --}}
     <style>
         @media print {
-            body {
-                background: white !important;
+
+            /* ページ設定 */
+            @page {
+                size: A4 landscape;
+                margin: 0.5in;
             }
 
+            body {
+                background: white !important;
+                font-size: 10px !important;
+            }
+
+            /* サイドバーとヘッダーを非表示 */
+            flux-sidebar,
+            flux-header,
+            [data-flux-sidebar],
+            [data-flux-header] {
+                display: none !important;
+            }
+
+            /* メインコンテンツを全幅に */
+            flux-main,
+            [data-flux-main] {
+                margin-left: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            /* コンテナの調整 */
+            .max-w-7xl {
+                max-width: 100% !important;
+            }
+
+            .p-6 {
+                padding: 0.5rem !important;
+            }
+
+            .mb-8,
+            .mb-6 {
+                margin-bottom: 0.5rem !important;
+            }
+
+            /* 背景色の調整 */
             .bg-gray-50,
             .bg-gray-900,
             .bg-white,
@@ -431,6 +470,7 @@
                 background: white !important;
             }
 
+            /* テキスト色の調整 */
             .text-gray-900,
             .text-white,
             .text-gray-600,
@@ -446,6 +486,7 @@
                 color: red !important;
             }
 
+            /* ボーダー色の調整 */
             .border-gray-300,
             .border-gray-600 {
                 border-color: black !important;
@@ -455,12 +496,76 @@
                 background: #f5f5f5 !important;
             }
 
+            /* ボタンを非表示 */
             button {
                 display: none !important;
             }
 
+            /* 影を削除 */
             .shadow-lg {
                 box-shadow: none !important;
+            }
+
+            /* テーブルの調整 */
+            table {
+                font-size: 8px !important;
+                width: 100% !important;
+                table-layout: fixed !important;
+            }
+
+            th,
+            td {
+                padding: 2px 4px !important;
+                font-size: 8px !important;
+                line-height: 1.2 !important;
+                word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
+            }
+
+            /* テーブルヘッダーの調整 */
+            th {
+                font-weight: bold !important;
+                background: #f0f0f0 !important;
+            }
+
+            /* 基本パラメータセクションの調整 */
+            .grid-cols-2,
+            .grid-cols-4,
+            .grid-cols-6 {
+                grid-template-columns: repeat(6, 1fr) !important;
+                gap: 0.25rem !important;
+            }
+
+            /* パラメータカードの調整 */
+            .bg-gray-50.dark\\:bg-gray-700 {
+                padding: 0.25rem !important;
+                font-size: 8px !important;
+            }
+
+            /* セクションタイトルの調整 */
+            h1,
+            h2 {
+                font-size: 12px !important;
+                margin-bottom: 0.25rem !important;
+            }
+
+            /* 改ページの制御 */
+            .break-inside-avoid {
+                break-inside: avoid !important;
+            }
+
+            /* テーブルコンテナの調整 */
+            .overflow-x-auto {
+                overflow: visible !important;
+            }
+
+            /* 最小幅の調整 */
+            .min-w-\\[120px\\],
+            .min-w-\\[80px\\],
+            .min-w-\\[100px\\],
+            .min-w-\\[140px\\] {
+                min-width: auto !important;
+                width: auto !important;
             }
         }
     </style>
