@@ -16,6 +16,7 @@
                 <p class="text-gray-600 dark:text-gray-400">
                     風圧力計算の結果を表示しています。
                 </p>
+
             </div>
 
             {{-- 風圧力計算結果テーブル --}}
@@ -47,6 +48,10 @@
                                 <th
                                     class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white min-w-[100px]">
                                     限界高(m)
+                                </th>
+                                <th
+                                    class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white min-w-[100px]">
+                                    W(KN)
                                 </th>
                                 <th
                                     class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white min-w-[120px]">
@@ -119,9 +124,11 @@
                                     </td>
 
                                     {{-- 幅（2行分のrowspan） --}}
-                                    <td rowspan="2"
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        {{ $width ? number_format($width, 1) : '-' }}
+                                    <td rowspan="2" class="border border-gray-300 dark:border-gray-600 px-2 py-1">
+                                        <input type="number" id="width_{{ $heightKey }}" step="0.1"
+                                            min="0" max="100" value="0.0"
+                                            class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
+                                            oninput="calculateRow('{{ $heightKey }}')" />
                                     </td>
 
                                     {{-- 設定高名 A --}}
@@ -131,33 +138,49 @@
                                     </td>
 
                                     {{-- 設定高(m) A --}}
-                                    <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        {{ $height ? number_format($height, 1) : '-' }}
+                                    <td class="border border-gray-300 dark:border-gray-600 px-2 py-1">
+                                        <input type="number" id="height_a_{{ $heightKey }}" step="0.1"
+                                            min="0" max="100" value="0.0"
+                                            class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
+                                            oninput="calculateRow('{{ $heightKey }}')" />
                                     </td>
 
-                                    {{-- 限界高（2行分のrowspan） --}}
-                                    <td rowspan="2"
+                                    {{-- 限界高 A（上半分：斜線、下半分：計算結果） --}}
+                                    <td class="border border-gray-300 dark:border-gray-600 px-0 py-0 relative">
+                                        <div class="h-full flex flex-col">
+                                            {{-- 上半分：斜線 --}}
+                                            <div class="flex-1 relative bg-gray-100 dark:bg-gray-700 diagonal-line">
+                                            </div>
+                                            {{-- 下半分：計算結果 --}}
+                                            <div id="limit_height_a_{{ $heightKey }}"
+                                                class="flex-1 flex items-center justify-center text-center text-gray-900 dark:text-white text-sm">
+                                                -
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {{-- W(KN) A --}}
+                                    <td id="w_a_{{ $heightKey }}"
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        {{ $limitHeight ? number_format($limitHeight, 3) : '-' }}
+                                        -
                                     </td>
 
                                     {{-- 負荷荷重（2行分のrowspan） --}}
-                                    <td rowspan="2"
+                                    <td rowspan="2" id="load_{{ $heightKey }}"
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        {{ $load ? number_format($load, 2) : '-' }}
+                                        -
                                     </td>
 
                                     {{-- 壁繋ぎ許容応力（2行分のrowspan） --}}
-                                    <td rowspan="2"
+                                    <td rowspan="2" id="allowable_stress_{{ $heightKey }}"
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        {{ $wallTieStress ? number_format($wallTieStress, 2) : '-' }}
+                                        -
                                     </td>
 
                                     {{-- 判定（2行分のrowspan） --}}
-                                    <td rowspan="2"
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold {{ $judgmentClass }}">
-                                        {{ $judgment }}
+                                    <td rowspan="2" id="judgment_{{ $heightKey }}"
+                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-gray-600">
+                                        -
                                     </td>
                                 </tr>
 
@@ -170,9 +193,31 @@
                                     </td>
 
                                     {{-- 設定高(m) B --}}
-                                    <td
+                                    <td class="border border-gray-300 dark:border-gray-600 px-2 py-1">
+                                        <input type="number" id="height_b_{{ $heightKey }}" step="0.1"
+                                            min="0" max="100" value="0.0"
+                                            class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
+                                            oninput="calculateRow('{{ $heightKey }}')" />
+                                    </td>
+
+                                    {{-- 限界高 B（上半分：斜線、下半分：計算結果） --}}
+                                    <td class="border border-gray-300 dark:border-gray-600 px-0 py-0 relative">
+                                        <div class="h-full flex flex-col">
+                                            {{-- 上半分：斜線 --}}
+                                            <div class="flex-1 relative bg-gray-100 dark:bg-gray-700 diagonal-line">
+                                            </div>
+                                            {{-- 下半分：計算結果 --}}
+                                            <div id="limit_height_b_{{ $heightKey }}"
+                                                class="flex-1 flex items-center justify-center text-center text-gray-900 dark:text-white text-sm">
+                                                -
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {{-- W(KN) B --}}
+                                    <td id="w_b_{{ $heightKey }}"
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        {{ $height ? number_format($height, 1) : '-' }}
+                                        -
                                     </td>
                                 </tr>
                             @endforeach
@@ -190,14 +235,10 @@
                 </button>
 
                 <div class="space-x-4">
-                    <button class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                        onclick="window.location.href='{{ route('scheck.input-confirmation') }}'">
-                        確認画面へ
-                    </button>
-
-                    <button class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                        onclick="window.print()">
-                        印刷
+                    <button id="finishCalculationBtn"
+                        class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                        onclick="finishCalculation()">
+                        計算終了
                     </button>
                 </div>
             </div>
@@ -251,5 +292,272 @@
                 box-shadow: none !important;
             }
         }
+
+        /* 斜線のスタイル */
+        .diagonal-line {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .diagonal-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 48%, #9ca3af 48%, #9ca3af 52%, transparent 52%);
+        }
     </style>
+
+    <script>
+        // パラメータをJavaScriptで利用可能にする
+        const wallTieStress2 = {{ $param->wall_tie_stress2 ?? 0 }};
+        const qzNValues = {
+            '10': {{ $param->QzN10 ?? 0 }},
+            '20': {{ $param->QzN20 ?? 0 }},
+            '35': {{ $param->QzN35 ?? 0 }},
+            '40': {{ $param->QzN40 ?? 0 }},
+            '50': {{ $param->QzN50 ?? 0 }},
+            '55': {{ $param->QzN55 ?? 0 }},
+            '70': {{ $param->QzN70 ?? 0 }},
+            '100': {{ $param->QzN100 ?? 0 }}
+        };
+        const c1Value = {{ $param->C1 ?? 0 }};
+        const c2Value = {{ $param->C2 ?? 0 }};
+
+        // W上の値（データベースから取得）
+        const wUpValues = {
+            '10': {{ $param->Wup10 ?? 0 }},
+            '20': {{ $param->Wup20 ?? 0 }},
+            '35': {{ $param->Wup35 ?? 0 }},
+            '40': {{ $param->Wup40 ?? 0 }},
+            '50': {{ $param->Wup50 ?? 0 }},
+            '55': {{ $param->Wup55 ?? 0 }},
+            '70': {{ $param->Wup70 ?? 0 }},
+            '100': {{ $param->Wup100 ?? 0 }}
+        };
+
+        // W下の値（データベースから取得）
+        const wDnValues = {
+            '10': {{ $param->Wdn10 ?? 0 }},
+            '20': {{ $param->Wdn20 ?? 0 }},
+            '35': {{ $param->Wdn35 ?? 0 }},
+            '40': {{ $param->Wdn40 ?? 0 }},
+            '50': {{ $param->Wdn50 ?? 0 }},
+            '55': {{ $param->Wdn55 ?? 0 }},
+            '70': {{ $param->Wdn70 ?? 0 }},
+            '100': {{ $param->Wdn100 ?? 0 }}
+        };
+
+        // ページ読み込み時に初期計算を実行
+        window.addEventListener('DOMContentLoaded', function() {
+            const heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+            heightRanges.forEach(range => {
+                calculateRow(range);
+            });
+        });
+
+        function calculateRow(heightRange) {
+            const width = parseFloat(document.getElementById(`width_${heightRange}`).value) || 0;
+            const heightA = parseFloat(document.getElementById(`height_a_${heightRange}`).value) || 0;
+            const heightB = parseFloat(document.getElementById(`height_b_${heightRange}`).value) || 0;
+
+            const qzN = qzNValues[heightRange] || 0;
+            const c1 = c1Value || 0;
+            const c2 = c2Value || 0;
+            const wallTieStress = wallTieStress2 || 0;
+
+
+            // 幅と設定高さA,Bとも値が0もしくは0.0以外のときに表示
+            const shouldDisplay = width > 0 && heightA > 0 && heightB > 0;
+
+            if (shouldDisplay) {
+                // 限界高の計算: 限界高さ = 壁繋ぎ許容応力 / (QzN × C1 × 幅)
+                let limitHeightA = '-';
+                let limitHeightB = '-';
+                if (qzN > 0 && c1 > 0 && width > 0 && wallTieStress > 0) {
+                    const limitHeightValue = wallTieStress / (qzN * c1 * width);
+                    // 小数点第3位で切り下げ
+                    const limitHeightFormatted = Math.floor(limitHeightValue * 1000) / 1000;
+                    const limitHeightText = limitHeightFormatted.toFixed(3);
+
+                    // A行とB行で同じ値を表示
+                    limitHeightA = limitHeightText;
+                    limitHeightB = limitHeightText;
+                }
+
+                // W(KN)の計算
+                // W上 = QzN × C2 × 幅 × 設定高さA
+                // W下 = QzN × C2 × 幅 × 設定高さB
+                let wA = '-';
+                let wB = '-';
+
+                if (qzN > 0 && c2 > 0 && width > 0 && heightA > 0) {
+                    const wUpValue = qzN * c2 * width * heightA;
+                    // 小数点第3位で切り上げ
+                    wA = (Math.ceil(wUpValue * 1000) / 1000).toFixed(3);
+                }
+
+                if (qzN > 0 && c2 > 0 && width > 0 && heightB > 0) {
+                    const wDnValue = qzN * c2 * width * heightB;
+                    // 小数点第3位で切り上げ
+                    wB = (Math.ceil(wDnValue * 1000) / 1000).toFixed(3);
+                }
+
+                // 負荷荷重の計算（修正版）
+                // ROUNDUP((Wup*(設定高さA/2+設定高さB)+(Wdn*(設定高さB/2)))/設定高さB, 3)
+                let load = '-';
+                if (wA !== '-' && wB !== '-' && heightA > 0 && heightB > 0) {
+                    const wUpValue = parseFloat(wA);
+                    const wDnValue = parseFloat(wB);
+
+                    // Wup*(設定高さA/2+設定高さB) = Wup * (heightA/2 + heightB)
+                    const upperPart = wUpValue * (heightA / 2 + heightB);
+                    // Wdn*(設定高さB/2) = Wdn * (heightB/2)
+                    const lowerPart = wDnValue * (heightB / 2);
+
+                    // (上部分 + 下部分) / 設定高さB
+                    const loadValue = (upperPart + lowerPart) / heightB;
+                    // 小数点第3位で切り上げ
+                    load = Math.ceil(loadValue * 1000) / 1000;
+                    load = load.toFixed(3);
+                }
+
+                // 壁繋ぎ許容応力
+                const allowableStress = wallTieStress > 0 ? wallTieStress.toFixed(2) : '-';
+
+                // 判定
+                let judgment = '-';
+                let judgmentClass =
+                    'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-gray-600';
+                if (load !== '-' && allowableStress !== '-') {
+                    const loadNum = parseFloat(load);
+                    const allowableNum = parseFloat(allowableStress);
+                    if (loadNum <= allowableNum) {
+                        judgment = 'OK';
+                        judgmentClass =
+                            'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-green-600';
+                    } else {
+                        judgment = 'NG';
+                        judgmentClass =
+                            'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-red-600';
+                    }
+                }
+
+                // 結果を表示
+                document.getElementById(`limit_height_a_${heightRange}`).textContent = limitHeightA;
+                document.getElementById(`limit_height_b_${heightRange}`).textContent = limitHeightB;
+                document.getElementById(`w_a_${heightRange}`).textContent = wA;
+                document.getElementById(`w_b_${heightRange}`).textContent = wB;
+                document.getElementById(`load_${heightRange}`).textContent = load;
+                document.getElementById(`allowable_stress_${heightRange}`).textContent = allowableStress;
+
+                const judgmentElement = document.getElementById(`judgment_${heightRange}`);
+                judgmentElement.textContent = judgment;
+                judgmentElement.className = judgmentClass;
+
+                // W値をデータベースに保存
+                saveWValues(heightRange, wA !== '-' ? parseFloat(wA) : null, wB !== '-' ? parseFloat(wB) : null);
+            } else {
+                // 条件を満たさない場合は全て「-」を表示
+                document.getElementById(`limit_height_a_${heightRange}`).textContent = '-';
+                document.getElementById(`limit_height_b_${heightRange}`).textContent = '-';
+                document.getElementById(`w_a_${heightRange}`).textContent = '-';
+                document.getElementById(`w_b_${heightRange}`).textContent = '-';
+                document.getElementById(`load_${heightRange}`).textContent = '-';
+                document.getElementById(`allowable_stress_${heightRange}`).textContent = '-';
+
+                const judgmentElement = document.getElementById(`judgment_${heightRange}`);
+                judgmentElement.textContent = '-';
+                judgmentElement.className =
+                    'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-gray-600';
+
+                // W値をnullで保存（値がクリアされた場合）
+                saveWValues(heightRange, null, null);
+            }
+        }
+
+        // W値をデータベースに保存する関数
+        function saveWValues(heightRange, wupValue, wdnValue) {
+            // CSRFトークンを取得
+            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+            fetch('/scheck/wind-pressure-result/save-w-values', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token
+                    },
+                    body: JSON.stringify({
+                        height_range: heightRange,
+                        wup_value: wupValue,
+                        wdn_value: wdnValue
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log(`W値保存完了 - 高さ範囲: ${heightRange}, Wup: ${data.wup}, Wdn: ${data.wdn}`);
+                    } else {
+                        console.error('W値保存エラー:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('W値保存通信エラー:', error);
+                });
+        }
+
+        // 計算終了ボタンの処理
+        function finishCalculation() {
+            // 全ての負荷荷重値を収集
+            const heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+            const loadValues = {};
+
+            heightRanges.forEach(range => {
+                const loadElement = document.getElementById(`load_${range}`);
+                const loadText = loadElement.textContent.trim();
+                loadValues[range] = loadText !== '-' ? parseFloat(loadText) : null;
+            });
+
+            // CSRFトークンを取得
+            const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+            // ボタンを無効化
+            const btn = document.getElementById('finishCalculationBtn');
+            btn.disabled = true;
+            btn.textContent = '処理中...';
+
+            fetch('/scheck/wind-pressure-result/finish-calculation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token
+                    },
+                    body: JSON.stringify({
+                        load_values: loadValues
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('計算が完了しました。');
+                        // 確認画面へリダイレクト
+                        window.location.href = '{{ route('scheck.input-confirmation') }}';
+                    } else {
+                        alert('エラーが発生しました: ' + data.error);
+                        // ボタンを元に戻す
+                        btn.disabled = false;
+                        btn.textContent = '計算終了';
+                    }
+                })
+                .catch(error => {
+                    console.error('計算終了通信エラー:', error);
+                    alert('通信エラーが発生しました。');
+                    // ボタンを元に戻す
+                    btn.disabled = false;
+                    btn.textContent = '計算終了';
+                });
+        }
+    </script>
 </x-layouts.app>
