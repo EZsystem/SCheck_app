@@ -23,6 +23,19 @@
 
             </div>
 
+            {{-- 最終値取得ボタン --}}
+            <div class="mb-6">
+                <button type="button"
+                    class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+                    onclick="loadLastWindPressureValues()">
+                    <span>📥</span>
+                    <span>最終値を一括取得</span>
+                </button>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    過去に入力された幅・設定高さの値を一括で取得して入力フィールドに設定します
+                </p>
+            </div>
+
             {{-- 風圧力計算結果テーブル --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
                 <div class="overflow-x-auto">
@@ -130,7 +143,7 @@
                                     {{-- 幅（2行分のrowspan） --}}
                                     <td rowspan="2" class="border border-gray-300 dark:border-gray-600 px-2 py-1">
                                         <input type="number" id="width_{{ $heightKey }}" step="0.1"
-                                            min="0" max="100" value="0.0"
+                                            min="0" max="100" value=""
                                             class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
                                             oninput="calculateRow('{{ $heightKey }}')" />
                                     </td>
@@ -144,7 +157,7 @@
                                     {{-- 設定高(m) A --}}
                                     <td class="border border-gray-300 dark:border-gray-600 px-2 py-1">
                                         <input type="number" id="height_a_{{ $heightKey }}" step="0.1"
-                                            min="0" max="100" value="0.0"
+                                            min="0" max="100" value=""
                                             class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
                                             oninput="calculateRow('{{ $heightKey }}')" />
                                     </td>
@@ -199,7 +212,7 @@
                                     {{-- 設定高(m) B --}}
                                     <td class="border border-gray-300 dark:border-gray-600 px-2 py-1">
                                         <input type="number" id="height_b_{{ $heightKey }}" step="0.1"
-                                            min="0" max="100" value="0.0"
+                                            min="0" max="100" value=""
                                             class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
                                             oninput="calculateRow('{{ $heightKey }}')" />
                                     </td>
@@ -584,6 +597,130 @@
                     btn.disabled = false;
                     btn.textContent = '計算終了';
                 });
+        }
+
+        // 最終値を取得する関数
+        async function loadLastWindPressureValues() {
+            try {
+                console.log('最終値取得を開始します...');
+                const response = await fetch('/scheck/wind-pressure-result/get-last-values', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute(
+                            'content')
+                    }
+                });
+
+                console.log('APIレスポンス:', response);
+
+                if (!response.ok) {
+                    throw new Error('データの取得に失敗しました');
+                }
+
+                const data = await response.json();
+                console.log('取得したデータ:', data);
+
+                let updatedCount = 0;
+                const heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+
+                // 幅の値を設定（Ltop系列）
+                console.log('幅のデータ:', data.widths);
+                heightRanges.forEach(range => {
+                    const widthInput = document.getElementById(`width_${range}`);
+                    if (widthInput) {
+                        const widthValue = data.widths[range];
+                        if (widthValue !== null && widthValue !== undefined) {
+                            console.log(`width_${range}に値を設定:`, widthValue);
+                            widthInput.value = widthValue;
+                            updatedCount++;
+                        } else {
+                            console.log(`width_${range}の値はnullです`);
+                            widthInput.value = '';
+                        }
+                    } else {
+                        console.log(`width_${range}の要素が見つかりません`);
+                    }
+                });
+
+                // 設定高さAの値を設定（Htopup系列）
+                console.log('設定高さAのデータ:', data.heights_a);
+                heightRanges.forEach(range => {
+                    const heightAInput = document.getElementById(`height_a_${range}`);
+                    if (heightAInput) {
+                        const heightAValue = data.heights_a[range];
+                        if (heightAValue !== null && heightAValue !== undefined) {
+                            console.log(`height_a_${range}に値を設定:`, heightAValue);
+                            heightAInput.value = heightAValue;
+                            updatedCount++;
+                        } else {
+                            console.log(`height_a_${range}の値はnullです`);
+                            heightAInput.value = '';
+                        }
+                    } else {
+                        console.log(`height_a_${range}の要素が見つかりません`);
+                    }
+                });
+
+                // 設定高さBの値を設定（Htopdn系列）
+                console.log('設定高さBのデータ:', data.heights_b);
+                heightRanges.forEach(range => {
+                    const heightBInput = document.getElementById(`height_b_${range}`);
+                    if (heightBInput) {
+                        const heightBValue = data.heights_b[range];
+                        if (heightBValue !== null && heightBValue !== undefined) {
+                            console.log(`height_b_${range}に値を設定:`, heightBValue);
+                            heightBInput.value = heightBValue;
+                            updatedCount++;
+                        } else {
+                            console.log(`height_b_${range}の値はnullです`);
+                            heightBInput.value = '';
+                        }
+                    } else {
+                        console.log(`height_b_${range}の要素が見つかりません`);
+                    }
+                });
+
+                // 値を設定後に各行の計算を実行
+                heightRanges.forEach(range => {
+                    calculateRow(range);
+                });
+
+                // 成功メッセージを表示
+                showWindPressureMessage(`最終値を取得しました（${updatedCount}個のフィールドを更新）`, 'success');
+
+            } catch (error) {
+                console.error('Error:', error);
+                showWindPressureMessage('最終値の取得に失敗しました: ' + error.message, 'error');
+            }
+        }
+
+        // メッセージ表示関数
+        function showWindPressureMessage(message, type) {
+            // 既存のメッセージがあれば削除
+            const existingMessage = document.querySelector('.wind-pressure-message-toast');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
+            // メッセージ要素を作成
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `wind-pressure-message-toast fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-red-600 text-white'
+            }`;
+            messageDiv.textContent = message;
+
+            // ページに追加
+            document.body.appendChild(messageDiv);
+
+            // 4秒後に自動削除
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 4000);
         }
     </script>
 </x-layouts.app>

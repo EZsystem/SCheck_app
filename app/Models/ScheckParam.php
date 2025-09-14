@@ -120,5 +120,32 @@ class ScheckParam extends Model
         'Wdn55',
         'Wdn70',
         'Wdn100',
+        // Ltop系列（各高さ範囲の幅）
+        'Ltop10',
+        'Ltop20',
+        'Ltop35',
+        'Ltop40',
+        'Ltop50',
+        'Ltop55',
+        'Ltop70',
+        'Ltop100',
+        // Htopup系列（各高さ範囲の設定高さA）
+        'Htopup10',
+        'Htopup20',
+        'Htopup35',
+        'Htopup40',
+        'Htopup50',
+        'Htopup55',
+        'Htopup70',
+        'Htopup100',
+        // Htopdn系列（各高さ範囲の設定高さB）
+        'Htopdn10',
+        'Htopdn20',
+        'Htopdn35',
+        'Htopdn40',
+        'Htopdn50',
+        'Htopdn55',
+        'Htopdn70',
+        'Htopdn100',
     ];
 }

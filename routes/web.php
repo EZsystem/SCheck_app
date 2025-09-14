@@ -516,6 +516,68 @@ Route::get('/scheck/wind-pressure-result', function () {
     return view('scheck.wind-pressure-result', compact('param'));
 })->name('scheck.wind-pressure-result');
 
+// wind-pressure-result 最終値取得API
+Route::get('/scheck/wind-pressure-result/get-last-values', function () {
+    // 現在のセッションのレコードIDを取得
+    $currentId = session('scheck_param_id');
+
+    // 現在のレコード以外で最新のレコードを取得（Ltop系列、Htopup系列、Htopdn系列のいずれかが入力されているもの）
+    $lastParam = \App\Models\ScheckParam::where(function ($query) {
+        $query->whereNotNull('Ltop10')->orWhereNotNull('Ltop20')->orWhereNotNull('Ltop35')->orWhereNotNull('Ltop40')
+            ->orWhereNotNull('Ltop50')->orWhereNotNull('Ltop55')->orWhereNotNull('Ltop70')->orWhereNotNull('Ltop100')
+            ->orWhereNotNull('Htopup10')->orWhereNotNull('Htopup20')->orWhereNotNull('Htopup35')->orWhereNotNull('Htopup40')
+            ->orWhereNotNull('Htopup50')->orWhereNotNull('Htopup55')->orWhereNotNull('Htopup70')->orWhereNotNull('Htopup100')
+            ->orWhereNotNull('Htopdn10')->orWhereNotNull('Htopdn20')->orWhereNotNull('Htopdn35')->orWhereNotNull('Htopdn40')
+            ->orWhereNotNull('Htopdn50')->orWhereNotNull('Htopdn55')->orWhereNotNull('Htopdn70')->orWhereNotNull('Htopdn100');
+    })
+        ->when($currentId, function ($query, $currentId) {
+            return $query->where('id', '!=', $currentId);
+        })
+        ->orderBy('id', 'desc')
+        ->first();
+
+    if (!$lastParam) {
+        $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+        $emptyWidths = [];
+        $emptyHeightsA = [];
+        $emptyHeightsB = [];
+
+        foreach ($heightRanges as $range) {
+            $emptyWidths[$range] = null;
+            $emptyHeightsA[$range] = null;
+            $emptyHeightsB[$range] = null;
+        }
+
+        return response()->json([
+            'widths' => $emptyWidths,
+            'heights_a' => $emptyHeightsA,
+            'heights_b' => $emptyHeightsB,
+            'message' => '過去のデータが見つかりませんでした'
+        ]);
+    }
+
+    // 1レコード前の値をそのまま取得（値がない箇所はnullのまま）
+    $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+
+    $widths = [];
+    $heightsA = [];
+    $heightsB = [];
+
+    // 各高さ範囲の値を取得
+    foreach ($heightRanges as $range) {
+        $widths[$range] = $lastParam->{"Ltop{$range}"};
+        $heightsA[$range] = $lastParam->{"Htopup{$range}"};
+        $heightsB[$range] = $lastParam->{"Htopdn{$range}"};
+    }
+
+    return response()->json([
+        'widths' => $widths,
+        'heights_a' => $heightsA,
+        'heights_b' => $heightsB,
+        'message' => '最終値を取得しました'
+    ]);
+})->name('scheck.wind-pressure-result.get-last-values');
+
 // W値保存用エンドポイント
 Route::post('/scheck/wind-pressure-result/save-w-values', function (\Illuminate\Http\Request $request) {
     $validated = $request->validate([
