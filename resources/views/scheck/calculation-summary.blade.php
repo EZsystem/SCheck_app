@@ -407,6 +407,10 @@
                         onclick="window.print()">
                         印刷
                     </button>
+                    <button class="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                        onclick="window.location.href='{{ route('scheck.calculation-summary.export-csv') }}'">
+                        CSV出力
+                    </button>
                     <button class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                         onclick="window.location.href='{{ route('scheck.input-confirmation') }}'">
                         確認画面へ

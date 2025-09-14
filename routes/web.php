@@ -525,6 +525,178 @@ Route::get('/scheck/calculation-summary', function () {
     return view('scheck.calculation-summary', compact('param'));
 })->name('scheck.calculation-summary');
 
+// CSV出力
+Route::get('/scheck/calculation-summary/export-csv', function () {
+    // セッションからパラメータIDを取得
+    $id = session('scheck_param_id');
+    $param = $id ? \App\Models\ScheckParam::find($id) : null;
+
+    if (!$param) {
+        return redirect()->route('scheck.environment')->with('error', 'パラメータが見つかりません。最初からやり直してください。');
+    }
+
+    // CSVデータを生成
+    $csvData = [];
+
+    // ヘッダー情報
+    $csvData[] = ['計算結果一覧', '', '', '', '', '', '', '', '', ''];
+    $csvData[] = ['出力日時', date('Y-m-d H:i:s'), '', '', '', '', '', '', '', ''];
+    $csvData[] = ['', '', '', '', '', '', '', '', '', ''];
+
+    // 基本パラメータ
+    $csvData[] = ['基本パラメータ', '', '', '', '', '', '', '', '', ''];
+    $csvData[] = ['Vo', $param->Vo ?? '-', 'Ke', $param->Ke ?? '-', 'EB', $param->EB ?? '-', 'Eg', $param->Eg ?? '-', 'Co', $param->Co ?? '-'];
+    $csvData[] = ['phi', $param->phi ?? '-', '', '', '', '', '', '', '', ''];
+    $csvData[] = ['', '', '', '', '', '', '', '', '', ''];
+
+    // L、H寸法
+    $csvData[] = ['L、H寸法', '', '', '', '', '', '', '', '', ''];
+    $csvData[] = ['Lg（地上建物長さ）', $param->Lg ? number_format($param->Lg, 1) . 'm' : '-', 'Bg（地上建物幅）', $param->Bg ? number_format($param->Bg, 1) . 'm' : '-', '', '', '', '', '', ''];
+    $csvData[] = ['Ba（空中建物幅）', $param->Ba ? number_format($param->Ba, 1) . 'm' : '-', 'Ha（空中建物高さ）', $param->Ha ? number_format($param->Ha, 1) . 'm' : '-', '', '', '', '', '', ''];
+    $csvData[] = ['', '', '', '', '', '', '', '', '', ''];
+
+    // 【一般部】足場に作用する風圧力Ｐ（kN）
+    $csvData[] = ['【一般部】足場に作用する風圧力Ｐ（kN）', '', '', '', '', '', '', '', '', ''];
+    $csvData[] = ['位置高さ(m)', 'S', '壁繋ぎ自担数値_幅(m)', '壁繋ぎ自担数値_高さ(m)', '限界高(m)', '負荷荷重(KN)', '壁繋ぎ許容応力(KN)', '判定', '', ''];
+
+    $heightRanges = [
+        ['0～10', '10'],
+        ['10～20', '20'],
+        ['20～35', '35'],
+        ['35～40', '40'],
+        ['40～50', '50'],
+        ['50～55', '55'],
+        ['55～70', '70'],
+        ['70～100', '100'],
+    ];
+
+    foreach ($heightRanges as $range) {
+        $heightKey = $range[1];
+        $sValue = $param->{'S' . $heightKey} ?? null;
+        $width = $param->{'L' . $heightKey} ?? null;
+        $height = $param->{'H' . $heightKey} ?? null;
+        $pbtmValue = $param->{'Pbtm' . $heightKey} ?? null;
+        $wallTieStress = $param->wall_tie_stress2 ?? null;
+        $qzN = $param->{'QzN' . $heightKey} ?? 0;
+        $c1 = $param->C1 ?? 0;
+
+        // 限界高の計算
+        $limitHeight = null;
+        if ($qzN > 0 && $c1 > 0 && $width > 0 && $wallTieStress > 0) {
+            $limitHeight = $wallTieStress / ($qzN * $c1 * $width);
+            $limitHeight = floor($limitHeight * 1000) / 1000;
+        }
+
+        // 判定
+        $judgment = '-';
+        if ($pbtmValue > 0 && $wallTieStress > 0) {
+            $judgment = $pbtmValue <= $wallTieStress ? 'OK' : 'NG';
+        }
+
+        $csvData[] = [
+            $range[0],
+            is_numeric($sValue) ? number_format($sValue, 2) : '-',
+            is_numeric($width) ? number_format($width, 1) : '-',
+            is_numeric($height) ? number_format($height, 1) : '-',
+            is_numeric($limitHeight) ? number_format($limitHeight, 3) : '-',
+            is_numeric($pbtmValue) ? number_format($pbtmValue, 3) : '-',
+            is_numeric($wallTieStress) ? number_format($wallTieStress, 2) : '-',
+            $judgment,
+            '',
+            ''
+        ];
+    }
+
+    $csvData[] = ['', '', '', '', '', '', '', '', '', ''];
+
+    // 【突出部】足場に作用する風圧力Ｐ（kN）
+    $csvData[] = ['【突出部】足場に作用する風圧力Ｐ（kN）', '', '', '', '', '', '', '', '', ''];
+    $csvData[] = ['位置高さ(m)', 'S', '幅(m)', '設定高名', '設定高(m)', '限界高(m)', '負荷荷重(KN)', '壁繋ぎ許容応力(KN)', '判定', ''];
+
+    foreach ($heightRanges as $range) {
+        $heightKey = $range[1];
+        $sValue = $param->{'S' . $heightKey} ?? null;
+        $width = $param->{'Ltop'} ?? null;
+        $heightA = $param->{'atop1'} ?? null;
+        $heightB = $param->{'atop2'} ?? null;
+        $ptopValue = $param->{'Ptop' . $heightKey} ?? null;
+        $wallTieStress = $param->wall_tie_stress2 ?? null;
+        $qzN = $param->{'QzN' . $heightKey} ?? 0;
+        $c1 = $param->C1 ?? 0;
+
+        // 限界高の計算
+        $limitHeight = null;
+        if ($qzN > 0 && $c1 > 0 && $width > 0 && $wallTieStress > 0) {
+            $limitHeight = $wallTieStress / ($qzN * $c1 * $width);
+            $limitHeight = floor($limitHeight * 1000) / 1000;
+        }
+
+        // 判定
+        $judgment = '-';
+        if ($ptopValue > 0 && $wallTieStress > 0) {
+            $judgment = $ptopValue <= $wallTieStress ? 'OK' : 'NG';
+        }
+
+        // A行
+        $csvData[] = [
+            $range[0],
+            is_numeric($sValue) ? number_format($sValue, 2) : '-',
+            is_numeric($width) ? number_format($width, 1) : '-',
+            'A',
+            is_numeric($heightA) ? number_format($heightA, 1) : '-',
+            is_numeric($limitHeight) ? number_format($limitHeight, 3) : '-',
+            is_numeric($ptopValue) ? number_format($ptopValue, 3) : '-',
+            is_numeric($wallTieStress) ? number_format($wallTieStress, 2) : '-',
+            $judgment,
+            ''
+        ];
+
+        // B行
+        $csvData[] = [
+            '',
+            '',
+            '',
+            'B',
+            is_numeric($heightB) ? number_format($heightB, 1) : '-',
+            is_numeric($limitHeight) ? number_format($limitHeight, 3) : '-',
+            '',
+            '',
+            '',
+            ''
+        ];
+    }
+
+    $csvData[] = ['', '', '', '', '', '', '', '', '', ''];
+
+    // 計算係数
+    $csvData[] = ['計算係数', '', '', '', '', '', '', '', '', ''];
+    $csvData[] = ['C1', $param->C1 ? number_format($param->C1, 2) : '-', 'C2', $param->C2 ? number_format($param->C2, 2) : '-', '', '', '', '', '', ''];
+    $csvData[] = ['r', $param->r ? number_format($param->r, 2) : '-', '壁繋ぎ許容応力', $param->wall_tie_stress2 ? number_format($param->wall_tie_stress2, 2) : '-', '', '', '', '', '', ''];
+
+    // CSVファイルを生成
+    $filename = '計算結果一覧_' . date('Y-m-d_H-i-s') . '.csv';
+
+    $headers = [
+        'Content-Type' => 'text/csv; charset=UTF-8',
+        'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+    ];
+
+    $callback = function () use ($csvData) {
+        $file = fopen('php://output', 'w');
+
+        // BOMを追加（Excelで正しく表示するため）
+        fwrite($file, "\xEF\xBB\xBF");
+
+        foreach ($csvData as $row) {
+            fputcsv($file, $row);
+        }
+
+        fclose($file);
+    };
+
+    return response()->stream($callback, 200, $headers);
+})->name('scheck.calculation-summary.export-csv');
+
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
