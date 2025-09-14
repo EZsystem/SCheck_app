@@ -564,8 +564,8 @@
                 .then(data => {
                     if (data.success) {
                         alert('計算が完了しました。');
-                        // 確認画面へリダイレクト
-                        window.location.href = '{{ route('scheck.input-confirmation') }}';
+                        // 計算結果一覧画面へリダイレクト
+                        window.location.href = '{{ route('scheck.calculation-summary') }}';
                     } else {
                         alert('エラーが発生しました: ' + data.error);
                         // ボタンを元に戻す

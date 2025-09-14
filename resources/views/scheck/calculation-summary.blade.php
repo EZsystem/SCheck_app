@@ -239,10 +239,6 @@
                                     限界高(m)
                                 </th>
                                 <th
-                                    class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white min-w-[100px]">
-                                    W(KN)
-                                </th>
-                                <th
                                     class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-sm font-semibold text-gray-900 dark:text-white min-w-[120px]">
                                     負荷荷重(KN)
                                 </th>
@@ -264,8 +260,6 @@
                                     $width = $param->{'Ltop' . $heightKey} ?? null;
                                     $heightA = $param->{'Htopup' . $heightKey} ?? null;
                                     $heightB = $param->{'Htopdn' . $heightKey} ?? null;
-                                    $wup = $param->{'Wup' . $heightKey} ?? null;
-                                    $wdn = $param->{'Wdn' . $heightKey} ?? null;
                                     $ptopValue = $param->{'Ptop' . $heightKey} ?? null;
                                     $wallTieStress = $param->wall_tie_stress2 ?? null;
                                     $qzN = $param->{'QzN' . $heightKey} ?? 0;
@@ -326,11 +320,6 @@
                                         {{ is_numeric($limitHeight) ? number_format($limitHeight, 3) : '-' }}
                                     </td>
 
-                                    {{-- W(KN) A --}}
-                                    <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        {{ is_numeric($wup) ? number_format($wup, 3) : '-' }}
-                                    </td>
 
                                     {{-- 負荷荷重（2行分のrowspan） --}}
                                     <td rowspan="2"
@@ -371,11 +360,6 @@
                                         {{ is_numeric($limitHeight) ? number_format($limitHeight, 3) : '-' }}
                                     </td>
 
-                                    {{-- W(KN) B --}}
-                                    <td
-                                        class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        {{ is_numeric($wdn) ? number_format($wdn, 3) : '-' }}
-                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
