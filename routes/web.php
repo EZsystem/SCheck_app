@@ -459,11 +459,17 @@ Route::post('/scheck/wind-pressure-result/save-w-values', function (\Illuminate\
     ]);
 })->name('scheck.wind-pressure-result.save-w-values');
 
-// 計算終了（負荷荷重値をPbtmシリーズに保存）
+// 計算終了（負荷荷重値をPtopシリーズに保存、入力値をLtop、Htopup、Htopdn系列に保存）
 Route::post('/scheck/wind-pressure-result/finish-calculation', function (\Illuminate\Http\Request $request) {
     $validated = $request->validate([
         'load_values' => ['required', 'array'],
         'load_values.*' => ['nullable', 'numeric'],
+        'width_values' => ['required', 'array'],
+        'width_values.*' => ['nullable', 'numeric'],
+        'height_a_values' => ['required', 'array'],
+        'height_a_values.*' => ['nullable', 'numeric'],
+        'height_b_values' => ['required', 'array'],
+        'height_b_values.*' => ['nullable', 'numeric'],
     ]);
 
     $id = session('scheck_param_id');
@@ -473,19 +479,51 @@ Route::post('/scheck/wind-pressure-result/finish-calculation', function (\Illumi
     }
 
     $loadValues = $validated['load_values'];
+    $widthValues = $validated['width_values'];
+    $heightAValues = $validated['height_a_values'];
+    $heightBValues = $validated['height_b_values'];
     $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
 
-    // 各高さ範囲の負荷荷重値をPtopシリーズに保存
+    // 各高さ範囲の値を保存
     foreach ($heightRanges as $range) {
+        // 負荷荷重値をPtopシリーズに保存
         $ptopColumn = "Ptop{$range}";
         $loadValue = $loadValues[$range] ?? null;
         $param->{$ptopColumn} = $loadValue;
+
+        // 幅の値をLtopシリーズに保存
+        $ltopColumn = "Ltop{$range}";
+        $widthValue = $widthValues[$range] ?? null;
+        $param->{$ltopColumn} = $widthValue;
+
+        // 設定高さAの値をHtopupシリーズに保存
+        $htopupColumn = "Htopup{$range}";
+        $heightAValue = $heightAValues[$range] ?? null;
+        $param->{$htopupColumn} = $heightAValue;
+
+        // 設定高さBの値をHtopdnシリーズに保存
+        $htopdnColumn = "Htopdn{$range}";
+        $heightBValue = $heightBValues[$range] ?? null;
+        $param->{$htopdnColumn} = $heightBValue;
     }
 
     $param->save();
 
     return response()->json(['success' => true, 'message' => '計算が完了しました']);
 })->name('scheck.wind-pressure-result.finish-calculation');
+
+// 計算結果一覧画面（案）
+Route::get('/scheck/calculation-summary', function () {
+    // セッションからパラメータIDを取得
+    $id = session('scheck_param_id');
+    $param = $id ? \App\Models\ScheckParam::find($id) : null;
+
+    if (!$param) {
+        return redirect()->route('scheck.environment')->with('error', 'パラメータが見つかりません。最初からやり直してください。');
+    }
+
+    return view('scheck.calculation-summary', compact('param'));
+})->name('scheck.calculation-summary');
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');

@@ -510,14 +510,33 @@
 
         // 計算終了ボタンの処理
         function finishCalculation() {
-            // 全ての負荷荷重値を収集
+            // 全ての負荷荷重値と入力値を収集
             const heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
             const loadValues = {};
+            const widthValues = {};
+            const heightAValues = {};
+            const heightBValues = {};
 
             heightRanges.forEach(range => {
+                // 負荷荷重値を収集
                 const loadElement = document.getElementById(`load_${range}`);
                 const loadText = loadElement.textContent.trim();
                 loadValues[range] = loadText !== '-' ? parseFloat(loadText) : null;
+
+                // 幅の値を収集（Ltop系列用）
+                const widthElement = document.getElementById(`width_${range}`);
+                const widthValue = parseFloat(widthElement.value) || null;
+                widthValues[range] = widthValue > 0 ? widthValue : null;
+
+                // 設定高さAの値を収集（Htopup系列用）
+                const heightAElement = document.getElementById(`height_a_${range}`);
+                const heightAValue = parseFloat(heightAElement.value) || null;
+                heightAValues[range] = heightAValue > 0 ? heightAValue : null;
+
+                // 設定高さBの値を収集（Htopdn系列用）
+                const heightBElement = document.getElementById(`height_b_${range}`);
+                const heightBValue = parseFloat(heightBElement.value) || null;
+                heightBValues[range] = heightBValue > 0 ? heightBValue : null;
             });
 
             // CSRFトークンを取得
@@ -526,7 +545,7 @@
             // ボタンを無効化
             const btn = document.getElementById('finishCalculationBtn');
             btn.disabled = true;
-            btn.textContent = '処理中...';
+            btn.textContent = '計算結果';
 
             fetch('/scheck/wind-pressure-result/finish-calculation', {
                     method: 'POST',
@@ -535,7 +554,10 @@
                         'X-CSRF-TOKEN': token
                     },
                     body: JSON.stringify({
-                        load_values: loadValues
+                        load_values: loadValues,
+                        width_values: widthValues,
+                        height_a_values: heightAValues,
+                        height_b_values: heightBValues
                     })
                 })
                 .then(response => response.json())
