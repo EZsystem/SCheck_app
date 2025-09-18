@@ -1,3 +1,7 @@
+@php
+    $prefill = $prefill ?? ['Lg' => null, 'Bg' => null, 'Ba' => null, 'Ha' => null];
+@endphp
+
 <x-layouts.app title="現場条件入力">
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
         <div class="max-w-4xl mx-auto">
@@ -29,7 +33,8 @@
                         R値計算用の寸法入力
                     </h2>
 
-                    <form class="space-y-6">
+                    <form id="site-form" method="POST" action="{{ route('scheck.site.save') }}" class="space-y-6">
+                        @csrf
                         {{-- R: 足場の形状、シート及びネット（自動計算） --}}
                         <div class="col-span-full">
                             <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 mb-6">
@@ -58,8 +63,8 @@
                                                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                     L: 長さ (m)
                                                 </label>
-                                                <input type="number" id="ground_length" step="0.1" min="0"
-                                                    placeholder="10.0"
+                                                <input type="number" id="ground_length" name="Lg" step="0.1" min="0"
+                                                    placeholder="10.0" value="{{ old('Lg', $prefill['Lg']) }}"
                                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
                                                     oninput="calculateR()" />
                                             </div>
@@ -68,8 +73,8 @@
                                                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                     B: 幅 (m)
                                                 </label>
-                                                <input type="number" id="ground_width" step="0.1" min="0"
-                                                    placeholder="5.0"
+                                                <input type="number" id="ground_width" name="Bg" step="0.1" min="0"
+                                                    placeholder="5.0" value="{{ old('Bg', $prefill['Bg']) }}"
                                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
                                                     oninput="calculateR()" />
                                             </div>
@@ -115,8 +120,8 @@
                                                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                     B: 幅 (m)
                                                 </label>
-                                                <input type="number" id="aerial_width" step="0.1" min="0"
-                                                    placeholder="5.0"
+                                                <input type="number" id="aerial_width" name="Ba" step="0.1" min="0"
+                                                    placeholder="5.0" value="{{ old('Ba', $prefill['Ba']) }}"
                                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                                                     oninput="calculateR()" />
                                             </div>
@@ -125,8 +130,8 @@
                                                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                                     H: 高さ (m)
                                                 </label>
-                                                <input type="number" id="aerial_height" step="0.1" min="0"
-                                                    placeholder="3.0"
+                                                <input type="number" id="aerial_height" name="Ha" step="0.1" min="0"
+                                                    placeholder="3.0" value="{{ old('Ha', $prefill['Ha']) }}"
                                                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                                                     oninput="calculateR()" />
                                             </div>
@@ -209,61 +214,23 @@
         }
 
         function submitSiteData() {
-            // 入力値を取得
-            const groundL = parseFloat(document.getElementById('ground_length').value) || null;
-            const groundB = parseFloat(document.getElementById('ground_width').value) || null;
-            const aerialB = parseFloat(document.getElementById('aerial_width').value) || null;
-            const aerialH = parseFloat(document.getElementById('aerial_height').value) || null;
+            const form = document.getElementById('site-form');
 
-            // フォームを作成
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '{{ route('scheck.site.save') }}';
+            const disabledInputs = [];
 
-            // CSRFトークンを追加
-            const csrfToken = document.createElement('input');
-            csrfToken.type = 'hidden';
-            csrfToken.name = '_token';
-            csrfToken.value = '{{ csrf_token() }}';
-            form.appendChild(csrfToken);
+            ['Lg', 'Bg', 'Ba', 'Ha'].forEach((field) => {
+                const input = form.querySelector(`[name="${field}"]`);
+                if (input && input.value === '') {
+                    input.disabled = true;
+                    disabledInputs.push(input);
+                }
+            });
 
-            // 地上部のL→Lg, B→Bg
-            if (groundL !== null) {
-                const lgInput = document.createElement('input');
-                lgInput.type = 'hidden';
-                lgInput.name = 'Lg';
-                lgInput.value = groundL;
-                form.appendChild(lgInput);
-            }
-
-            if (groundB !== null) {
-                const bgInput = document.createElement('input');
-                bgInput.type = 'hidden';
-                bgInput.name = 'Bg';
-                bgInput.value = groundB;
-                form.appendChild(bgInput);
-            }
-
-            // 空中部のB→Ba, H→Ha
-            if (aerialB !== null) {
-                const baInput = document.createElement('input');
-                baInput.type = 'hidden';
-                baInput.name = 'Ba';
-                baInput.value = aerialB;
-                form.appendChild(baInput);
-            }
-
-            if (aerialH !== null) {
-                const haInput = document.createElement('input');
-                haInput.type = 'hidden';
-                haInput.name = 'Ha';
-                haInput.value = aerialH;
-                form.appendChild(haInput);
-            }
-
-            // フォームをページに追加して送信
-            document.body.appendChild(form);
             form.submit();
+
+            disabledInputs.forEach((input) => {
+                input.disabled = false;
+            });
         }
 
         // 最終値を取得する関数

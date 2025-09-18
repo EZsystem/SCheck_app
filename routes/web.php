@@ -27,13 +27,31 @@ Route::post('/scheck/environment', function (\Illuminate\Http\Request $request) 
         'Vo' => ['required', 'integer', 'min:0', 'max:100'],
     ]);
 
-    // 保存
+    // 既存テーブルへ保存（従来動作の維持）
     $param = new \App\Models\ScheckParam();
     $param->Vo = $validated['Vo'];
     $param->save();
 
     // セッションにIDを保持
     session(['scheck_param_id' => $param->id]);
+
+    // 正規化スキーマにも保存（新実装）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    \App\Models\ScheckSetting::updateOrCreate(
+        ['run_id' => $run->id],
+        ['Vo' => $validated['Vo']]
+    );
+
+    // 新スキーマのセッションIDも保持
+    session(['scheck_run_id' => $run->id]);
 
     // 次画面へ
     return redirect()->route('scheck.s-coefficient');
@@ -62,6 +80,50 @@ Route::post('/scheck/s-coefficient', function (\Illuminate\Http\Request $request
     $param->save();
     session(['scheck_param_id' => $param->id]);
 
+    // 正規化スキーマにも保存（新実装）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    $run->site()->updateOrCreate(
+        ['run_id' => $run->id],
+        [
+            'run_id' => $run->id,
+            'Lg' => $validated['Lg'] ?? null,
+            'Bg' => $validated['Bg'] ?? null,
+            'Ba' => $validated['Ba'] ?? null,
+            'Ha' => $validated['Ha'] ?? null,
+        ]
+    );
+    session(['scheck_run_id' => $run->id]);
+
+    // 正規化スキーマにも保存（新実装）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+    foreach ($heightRanges as $range) {
+        $sKey = "S{$range}";
+        if (isset($validated[$sKey])) {
+            \App\Models\ScheckGeneralRange::updateOrCreate(
+                ['run_id' => $run->id, 'range_code' => (int)$range],
+                ['S' => (float)$validated[$sKey]]
+            );
+        }
+    }
+    session(['scheck_run_id' => $run->id]);
+
     return redirect()->route('scheck.ke-coefficient');
 })->name('scheck.s-coefficient.save');
 
@@ -84,6 +146,22 @@ Route::post('/scheck/ke-coefficient', function (\Illuminate\Http\Request $reques
     $param->fill($validated);
     $param->save();
     session(['scheck_param_id' => $param->id]);
+
+    // 正規化スキーマにも保存（新実装）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    \App\Models\ScheckSetting::updateOrCreate(
+        ['run_id' => $run->id],
+        ['Ke' => (float)$validated['Ke']]
+    );
+    session(['scheck_run_id' => $run->id]);
 
     return redirect()->route('scheck.eb-coefficient');
 })->name('scheck.ke-coefficient.save');
@@ -108,6 +186,22 @@ Route::post('/scheck/eb-coefficient', function (\Illuminate\Http\Request $reques
     $param->save();
     session(['scheck_param_id' => $param->id]);
 
+    // 正規化スキーマにも保存（新実装）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    \App\Models\ScheckSetting::updateOrCreate(
+        ['run_id' => $run->id],
+        ['EB' => (float)$validated['EB']]
+    );
+    session(['scheck_run_id' => $run->id]);
+
     return redirect()->route('scheck.eg-coefficient');
 })->name('scheck.eb-coefficient.save');
 
@@ -130,6 +224,22 @@ Route::post('/scheck/eg-coefficient', function (\Illuminate\Http\Request $reques
     $param->fill($validated);
     $param->save();
     session(['scheck_param_id' => $param->id]);
+
+    // 正規化スキーマにも保存（新実装）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    \App\Models\ScheckSetting::updateOrCreate(
+        ['run_id' => $run->id],
+        ['Eg' => (float)$validated['Eg']]
+    );
+    session(['scheck_run_id' => $run->id]);
 
     return redirect()->route('scheck.co-coefficient');
 })->name('scheck.eg-coefficient.save');
@@ -155,6 +265,22 @@ Route::post('/scheck/co-coefficient', function (\Illuminate\Http\Request $reques
     $param->save();
     session(['scheck_param_id' => $param->id]);
 
+    // 正規化スキーマにも保存（新実装）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    \App\Models\ScheckSetting::updateOrCreate(
+        ['run_id' => $run->id],
+        ['Co' => (float)$validated['Co'], 'phi' => (float)$validated['phi']]
+    );
+    session(['scheck_run_id' => $run->id]);
+
     return redirect()->route('scheck.allowable-stress');
 })->name('scheck.co-coefficient.save');
 
@@ -178,6 +304,25 @@ Route::post('/scheck/allowable-stress', function (\Illuminate\Http\Request $requ
     $param->fill($validated);
     $param->save();
     session(['scheck_param_id' => $param->id]);
+
+    // 正規化スキーマにも保存（新実装）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    \App\Models\ScheckSetting::updateOrCreate(
+        ['run_id' => $run->id],
+        [
+            'wall_tie_stress' => (float)$validated['wall_tie_stress'],
+            'War' => (float)$validated['War'],
+        ]
+    );
+    session(['scheck_run_id' => $run->id]);
 
     return redirect()->route('scheck.site');
 })->name('scheck.allowable-stress.save');
@@ -217,6 +362,30 @@ Route::post('/scheck/input-parameters', function (\Illuminate\Http\Request $requ
 
     // デバッグ用：保存後のデータをログ出力
     Log::info('Saved Param Data:', $param->toArray());
+
+    // 正規化スキーマにも保存（新実装: L/H/A の併走保存）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    foreach ($heightRanges as $range) {
+        $l = $validated["L{$range}"] ?? null;
+        $h = $validated["H{$range}"] ?? null;
+        $a = $validated["A{$range}"] ?? null;
+
+        if ($l !== null || $h !== null || $a !== null) {
+            \App\Models\ScheckGeneralRange::updateOrCreate(
+                ['run_id' => $run->id, 'range_code' => (int)$range],
+                ['L' => $l, 'H' => $h, 'A' => $a]
+            );
+        }
+    }
+    session(['scheck_run_id' => $run->id]);
 
     return redirect()->route('scheck.wind-pressure-result');
 })->name('scheck.input-parameters.save');
@@ -312,6 +481,16 @@ Route::post('/scheck/input-parameters/update-area', function (\Illuminate\Http\R
     }
 
     $param->save();
+
+    // 正規化スキーマにも保存（新実装: A の併走保存）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if ($run) {
+        \App\Models\ScheckGeneralRange::updateOrCreate(
+            ['run_id' => $run->id, 'range_code' => (int)$heightRange],
+            ['A' => $param->{$aColumn}]
+        );
+    }
 
     return response()->json(['success' => true, 'area' => $param->{$aColumn}]);
 })->name('scheck.input-parameters.update-area');
@@ -442,6 +621,12 @@ Route::get('/scheck/calculation-result', function () {
 
 // 現場条件保存
 Route::post('/scheck/site', function (\Illuminate\Http\Request $request) {
+    $request->merge(collect($request->only(['Lg', 'Bg', 'Ba', 'Ha']))
+        ->map(function ($value) {
+            return $value === '' ? null : $value;
+        })
+        ->toArray());
+
     $validated = $request->validate([
         'Lg' => ['nullable', 'numeric', 'min:0', 'max:100'],
         'Bg' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -459,11 +644,45 @@ Route::post('/scheck/site', function (\Illuminate\Http\Request $request) {
     $param->save();
     session(['scheck_param_id' => $param->id]);
 
+    // 正規化スキーマにも保存（ScheckSite に Lg/Bg/Ba/Ha を併走保存）
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    \App\Models\ScheckSite::updateOrCreate(
+        ['run_id' => $run->id],
+        [
+            'Lg' => $validated['Lg'] ?? null,
+            'Bg' => $validated['Bg'] ?? null,
+            'Ba' => $validated['Ba'] ?? null,
+            'Ha' => $validated['Ha'] ?? null,
+        ]
+    );
+    session(['scheck_run_id' => $run->id]);
+
     return redirect()->route('scheck.input-confirmation');
 })->name('scheck.site.save');
 
 Route::get('/scheck/site', function () {
-    return view('scheck.site');
+    $paramId = session('scheck_param_id');
+    $param = $paramId ? \App\Models\ScheckParam::find($paramId) : null;
+
+    $runId = session('scheck_run_id');
+    $site = $runId ? \App\Models\ScheckSite::where('run_id', $runId)->first() : null;
+
+    $prefill = [
+        'Lg' => optional($site)->Lg ?? optional($param)->Lg,
+        'Bg' => optional($site)->Bg ?? optional($param)->Bg,
+        'Ba' => optional($site)->Ba ?? optional($param)->Ba,
+        'Ha' => optional($site)->Ha ?? optional($param)->Ha,
+    ];
+
+    return view('scheck.site', compact('prefill'));
 })->name('scheck.site');
 
 // 最終値取得API
