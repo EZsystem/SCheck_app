@@ -337,18 +337,42 @@ Route::post('/scheck/input-parameters', function (\Illuminate\Http\Request $requ
     $rules = [];
     $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
 
+    $inputKeys = [];
     foreach ($heightRanges as $range) {
         $rules["L{$range}"] = ['nullable', 'numeric', 'min:0', 'max:100'];
         $rules["H{$range}"] = ['nullable', 'numeric', 'min:0', 'max:100'];
         $rules["A{$range}"] = ['nullable', 'numeric', 'min:0', 'max:10000'];
         $rules["Pbtm{$range}"] = ['nullable', 'numeric', 'min:0'];
+
+        $inputKeys[] = "L{$range}";
+        $inputKeys[] = "H{$range}";
+        $inputKeys[] = "A{$range}";
+        $inputKeys[] = "Pbtm{$range}";
     }
+
+    $request->merge(
+        collect($inputKeys)->mapWithKeys(fn ($key) => [
+            $key => ($request->input($key) === '' ? null : $request->input($key)),
+        ])->toArray()
+    );
 
     $validated = $request->validate($rules);
 
-    // デバッグ用：受信データをログ出力
-    Log::info('Input Parameters Received:', $request->all());
-    Log::info('Validated Data:', $validated);
+    $normalized = [];
+    foreach ($heightRanges as $range) {
+        $normalized["L{$range}"] = array_key_exists("L{$range}", $validated)
+            ? (is_null($validated["L{$range}"]) ? null : (float) $validated["L{$range}"])
+            : null;
+        $normalized["H{$range}"] = array_key_exists("H{$range}", $validated)
+            ? (is_null($validated["H{$range}"]) ? null : (float) $validated["H{$range}"])
+            : null;
+        $normalized["A{$range}"] = array_key_exists("A{$range}", $validated)
+            ? (is_null($validated["A{$range}"]) ? null : (float) $validated["A{$range}"])
+            : null;
+        $normalized["Pbtm{$range}"] = array_key_exists("Pbtm{$range}", $validated)
+            ? (is_null($validated["Pbtm{$range}"]) ? null : (float) $validated["Pbtm{$range}"])
+            : null;
+    }
 
     $id = session('scheck_param_id');
     $param = $id ? \App\Models\ScheckParam::find($id) : null;
@@ -356,12 +380,9 @@ Route::post('/scheck/input-parameters', function (\Illuminate\Http\Request $requ
         $param = new \App\Models\ScheckParam();
     }
 
-    $param->fill($validated);
+    $param->fill($normalized);
     $param->save();
     session(['scheck_param_id' => $param->id]);
-
-    // デバッグ用：保存後のデータをログ出力
-    Log::info('Saved Param Data:', $param->toArray());
 
     // 正規化スキーマにも保存（新実装: L/H/A の併走保存）
     $runId = session('scheck_run_id');
@@ -374,16 +395,27 @@ Route::post('/scheck/input-parameters', function (\Illuminate\Http\Request $requ
     }
 
     foreach ($heightRanges as $range) {
-        $l = $validated["L{$range}"] ?? null;
-        $h = $validated["H{$range}"] ?? null;
-        $a = $validated["A{$range}"] ?? null;
+        $l = $normalized["L{$range}"];
+        $h = $normalized["H{$range}"];
+        $a = $normalized["A{$range}"];
+        $pbtm = $normalized["Pbtm{$range}"];
 
-        if ($l !== null || $h !== null || $a !== null) {
-            \App\Models\ScheckGeneralRange::updateOrCreate(
-                ['run_id' => $run->id, 'range_code' => (int)$range],
-                ['L' => $l, 'H' => $h, 'A' => $a]
-            );
+        if (is_null($l) && is_null($h) && is_null($a) && is_null($pbtm)) {
+            \App\Models\ScheckGeneralRange::where('run_id', $run->id)
+                ->where('range_code', (int) $range)
+                ->delete();
+            continue;
         }
+
+        \App\Models\ScheckGeneralRange::updateOrCreate(
+            ['run_id' => $run->id, 'range_code' => (int)$range],
+            [
+                'L' => $l,
+                'H' => $h,
+                'A' => $a,
+                'Pbtm' => $pbtm,
+            ]
+        );
     }
     session(['scheck_run_id' => $run->id]);
 
@@ -395,7 +427,15 @@ Route::get('/scheck/input-parameters', function () {
     $id = session('scheck_param_id');
     $param = $id ? \App\Models\ScheckParam::find($id) : null;
 
-    return view('scheck.input-parameters', compact('param'));
+    $runId = session('scheck_run_id');
+    $ranges = $runId
+        ? \App\Models\ScheckGeneralRange::where('run_id', $runId)->get()->keyBy('range_code')
+        : collect();
+
+    return view('scheck.input-parameters', [
+        'param' => $param,
+        'ranges' => $ranges,
+    ]);
 })->name('scheck.input-parameters');
 
 // input-parameters 最終値取得API
@@ -404,49 +444,54 @@ Route::get('/scheck/input-parameters/get-last-values', function () {
     $currentId = session('scheck_param_id');
 
     // 現在のレコード以外で最新のレコードを取得（L系列またはH系列のいずれかが入力されているもの）
-    $lastParam = \App\Models\ScheckParam::where(function ($query) {
-        $query->whereNotNull('L10')->orWhereNotNull('L20')->orWhereNotNull('L35')->orWhereNotNull('L40')
-            ->orWhereNotNull('L50')->orWhereNotNull('L55')->orWhereNotNull('L70')->orWhereNotNull('L100')
-            ->orWhereNotNull('H10')->orWhereNotNull('H20')->orWhereNotNull('H35')->orWhereNotNull('H40')
-            ->orWhereNotNull('H50')->orWhereNotNull('H55')->orWhereNotNull('H70')->orWhereNotNull('H100');
-    })
-        ->when($currentId, function ($query, $currentId) {
-            return $query->where('id', '!=', $currentId);
-        })
-        ->orderBy('id', 'desc')
+    $lastRange = \App\Models\ScheckGeneralRange::whereNotNull('L')
+        ->orWhereNotNull('H')
+        ->orWhereNotNull('A')
+        ->orWhereNotNull('Pbtm')
+        ->orderByDesc('updated_at')
         ->first();
 
-    if (!$lastParam) {
+    if (!$lastRange) {
         return response()->json([
             'widths' => [],
             'heights' => [],
+            'areas' => [],
+            'loads' => [],
             'message' => '過去のデータが見つかりませんでした'
         ]);
     }
 
-    // L系列（幅）の値を取得
-    $widths = [];
+    $runRanges = \App\Models\ScheckGeneralRange::where('run_id', $lastRange->run_id)->get();
+
     $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
-
-    foreach ($heightRanges as $range) {
-        $lValue = $lastParam->{"L{$range}"};
-        if ($lValue !== null) {
-            $widths[$range] = $lValue;
-        }
-    }
-
-    // H系列（高さ）の値を取得
+    $widths = [];
     $heights = [];
+    $areas = [];
+    $loads = [];
+
     foreach ($heightRanges as $range) {
-        $hValue = $lastParam->{"H{$range}"};
-        if ($hValue !== null) {
-            $heights[$range] = $hValue;
+        $record = $runRanges->firstWhere('range_code', (int)$range);
+        if ($record) {
+            if (!is_null($record->L)) {
+                $widths[$range] = $record->L;
+            }
+            if (!is_null($record->H)) {
+                $heights[$range] = $record->H;
+            }
+            if (!is_null($record->A)) {
+                $areas[$range] = $record->A;
+            }
+            if (!is_null($record->Pbtm)) {
+                $loads[$range] = $record->Pbtm;
+            }
         }
     }
 
     return response()->json([
         'widths' => $widths,
         'heights' => $heights,
+        'areas' => $areas,
+        'loads' => $loads,
         'message' => '最終値を取得しました'
     ]);
 })->name('scheck.input-parameters.get-last-values');
@@ -603,6 +648,47 @@ Route::post('/scheck/calculate', function (\Illuminate\Http\Request $request) {
     $param->fill($wallTieStress2Values);
     $param->save();
 
+    // ScheckResult にも保存
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    $resultPayload = [
+        'r' => $fValues['r'] ?? null,
+        'Fbtm' => $fValues['Fbtm'] ?? null,
+        'Ftop' => $fValues['Ftop'] ?? null,
+        'C1' => $fValues['C1'] ?? null,
+        'C2' => $fValues['C2'] ?? null,
+        'Rg' => $fValues['Rg'] ?? null,
+        'Ra' => $fValues['Ra'] ?? null,
+        'calculation_meta' => [
+            'Vz' => $vzValues,
+            'QzN' => $qzValues,
+            'wall_tie_stress2' => $wallTieStress2Values['wall_tie_stress2'] ?? null,
+            'R_value' => $RValue,
+        ],
+        'completed_at' => now(),
+    ];
+
+    \App\Models\ScheckResult::updateOrCreate(
+        ['run_id' => $run->id],
+        $resultPayload
+    );
+
+    $run->status = 'completed';
+    $run->completed_at = now();
+    if (!$run->started_at) {
+        $run->started_at = now();
+    }
+    $run->save();
+
+    session(['scheck_run_id' => $run->id]);
+
     // 計算結果画面にリダイレクト
     return redirect()->route('scheck.calculation-result')->with('success', '計算が完了しました。');
 })->name('scheck.calculate');
@@ -732,7 +818,15 @@ Route::get('/scheck/wind-pressure-result', function () {
         return redirect()->route('scheck.environment')->with('error', 'パラメータが見つかりません。最初からやり直してください。');
     }
 
-    return view('scheck.wind-pressure-result', compact('param'));
+    $runId = session('scheck_run_id');
+    $topRanges = $runId
+        ? \App\Models\ScheckTopRange::where('run_id', $runId)->get()->keyBy('range_code')
+        : collect();
+
+    return view('scheck.wind-pressure-result', [
+        'param' => $param,
+        'topRanges' => $topRanges,
+    ]);
 })->name('scheck.wind-pressure-result');
 
 // wind-pressure-result 最終値取得API
@@ -741,58 +835,67 @@ Route::get('/scheck/wind-pressure-result/get-last-values', function () {
     $currentId = session('scheck_param_id');
 
     // 現在のレコード以外で最新のレコードを取得（Ltop系列、Htopup系列、Htopdn系列のいずれかが入力されているもの）
-    $lastParam = \App\Models\ScheckParam::where(function ($query) {
-        $query->whereNotNull('Ltop10')->orWhereNotNull('Ltop20')->orWhereNotNull('Ltop35')->orWhereNotNull('Ltop40')
-            ->orWhereNotNull('Ltop50')->orWhereNotNull('Ltop55')->orWhereNotNull('Ltop70')->orWhereNotNull('Ltop100')
-            ->orWhereNotNull('Htopup10')->orWhereNotNull('Htopup20')->orWhereNotNull('Htopup35')->orWhereNotNull('Htopup40')
-            ->orWhereNotNull('Htopup50')->orWhereNotNull('Htopup55')->orWhereNotNull('Htopup70')->orWhereNotNull('Htopup100')
-            ->orWhereNotNull('Htopdn10')->orWhereNotNull('Htopdn20')->orWhereNotNull('Htopdn35')->orWhereNotNull('Htopdn40')
-            ->orWhereNotNull('Htopdn50')->orWhereNotNull('Htopdn55')->orWhereNotNull('Htopdn70')->orWhereNotNull('Htopdn100');
+    $lastTopRange = \App\Models\ScheckTopRange::where(function ($query) {
+        $query->whereNotNull('Ltop')
+            ->orWhereNotNull('Htopup')
+            ->orWhereNotNull('Htopdn')
+            ->orWhereNotNull('Ptop')
+            ->orWhereNotNull('Wup')
+            ->orWhereNotNull('Wdn');
     })
-        ->when($currentId, function ($query, $currentId) {
-            return $query->where('id', '!=', $currentId);
-        })
-        ->orderBy('id', 'desc')
+        ->orderByDesc('updated_at')
         ->first();
 
-    if (!$lastParam) {
+    if (!$lastTopRange) {
         $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
-        $emptyWidths = [];
-        $emptyHeightsA = [];
-        $emptyHeightsB = [];
-
-        foreach ($heightRanges as $range) {
-            $emptyWidths[$range] = null;
-            $emptyHeightsA[$range] = null;
-            $emptyHeightsB[$range] = null;
-        }
 
         return response()->json([
-            'widths' => $emptyWidths,
-            'heights_a' => $emptyHeightsA,
-            'heights_b' => $emptyHeightsB,
+            'widths' => array_fill_keys($heightRanges, null),
+            'heights_a' => array_fill_keys($heightRanges, null),
+            'heights_b' => array_fill_keys($heightRanges, null),
+            'loads' => array_fill_keys($heightRanges, null),
+            'wup' => array_fill_keys($heightRanges, null),
+            'wdn' => array_fill_keys($heightRanges, null),
             'message' => '過去のデータが見つかりませんでした'
         ]);
     }
 
-    // 1レコード前の値をそのまま取得（値がない箇所はnullのまま）
-    $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+    $runRanges = \App\Models\ScheckTopRange::where('run_id', $lastTopRange->run_id)->get();
 
+    $heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
     $widths = [];
     $heightsA = [];
     $heightsB = [];
+    $loads = [];
+    $wupValues = [];
+    $wdnValues = [];
 
-    // 各高さ範囲の値を取得
     foreach ($heightRanges as $range) {
-        $widths[$range] = $lastParam->{"Ltop{$range}"};
-        $heightsA[$range] = $lastParam->{"Htopup{$range}"};
-        $heightsB[$range] = $lastParam->{"Htopdn{$range}"};
+        $record = $runRanges->firstWhere('range_code', (int)$range);
+        if ($record) {
+            $widths[$range] = $record->Ltop;
+            $heightsA[$range] = $record->Htopup;
+            $heightsB[$range] = $record->Htopdn;
+            $loads[$range] = $record->Ptop;
+            $wupValues[$range] = $record->Wup;
+            $wdnValues[$range] = $record->Wdn;
+        } else {
+            $widths[$range] = null;
+            $heightsA[$range] = null;
+            $heightsB[$range] = null;
+            $loads[$range] = null;
+            $wupValues[$range] = null;
+            $wdnValues[$range] = null;
+        }
     }
 
     return response()->json([
         'widths' => $widths,
         'heights_a' => $heightsA,
         'heights_b' => $heightsB,
+        'loads' => $loads,
+        'wup' => $wupValues,
+        'wdn' => $wdnValues,
         'message' => '最終値を取得しました'
     ]);
 })->name('scheck.wind-pressure-result.get-last-values');
@@ -815,13 +918,33 @@ Route::post('/scheck/wind-pressure-result/save-w-values', function (\Illuminate\
     $wupValue = $validated['wup_value'];
     $wdnValue = $validated['wdn_value'];
 
-    // WupとWdnカラムに保存
+    // WupとWdnカラムに保存（旧テーブル）
     $wupColumn = "Wup{$heightRange}";
     $wdnColumn = "Wdn{$heightRange}";
 
     $param->{$wupColumn} = $wupValue;
     $param->{$wdnColumn} = $wdnValue;
     $param->save();
+
+    // 正規化スキーマにも保存
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    \App\Models\ScheckTopRange::updateOrCreate(
+        ['run_id' => $run->id, 'range_code' => (int) $heightRange],
+        [
+            'Wup' => $wupValue,
+            'Wdn' => $wdnValue,
+        ]
+    );
+
+    session(['scheck_run_id' => $run->id]);
 
     return response()->json([
         'success' => true,
@@ -879,6 +1002,41 @@ Route::post('/scheck/wind-pressure-result/finish-calculation', function (\Illumi
     }
 
     $param->save();
+
+    // 正規化スキーマにも保存
+    $runId = session('scheck_run_id');
+    $run = $runId ? \App\Models\ScheckRun::find($runId) : null;
+    if (!$run) {
+        $run = \App\Models\ScheckRun::create([
+            'status' => 'draft',
+            'started_at' => now(),
+        ]);
+    }
+
+    foreach ($heightRanges as $range) {
+        $attributes = [
+            'Ltop' => $widthValues[$range] ?? null,
+            'Htopup' => $heightAValues[$range] ?? null,
+            'Htopdn' => $heightBValues[$range] ?? null,
+            'Ptop' => $loadValues[$range] ?? null,
+        ];
+
+        $allNull = collect($attributes)->every(fn ($value) => is_null($value));
+
+        if ($allNull) {
+            \App\Models\ScheckTopRange::where('run_id', $run->id)
+                ->where('range_code', (int) $range)
+                ->update($attributes);
+            continue;
+        }
+
+        \App\Models\ScheckTopRange::updateOrCreate(
+            ['run_id' => $run->id, 'range_code' => (int) $range],
+            $attributes
+        );
+    }
+
+    session(['scheck_run_id' => $run->id]);
 
     return response()->json(['success' => true, 'message' => '計算が完了しました']);
 })->name('scheck.wind-pressure-result.finish-calculation');
