@@ -1,3 +1,35 @@
+@php
+    $rangeDefaults = isset($ranges)
+        ? collect([10, 20, 35, 40, 50, 55, 70, 100])->mapWithKeys(function ($code) use ($ranges) {
+            return [(string) $code => $ranges->get($code)];
+        })
+        : collect();
+
+    $prefilledRangeData = $rangeDefaults->mapWithKeys(function ($record, $code) {
+        if (!$record) {
+            return [$code => null];
+        }
+
+        return [$code => [
+            'L' => $record->L,
+            'H' => $record->H,
+            'A' => $record->A,
+            'Pbtm' => $record->Pbtm,
+        ]];
+    })->toArray();
+
+    $rangeMap = [
+        '0_10' => 10,
+        '10_20' => 20,
+        '20_35' => 35,
+        '35_40' => 40,
+        '40_50' => 50,
+        '50_55' => 55,
+        '55_70' => 70,
+        '70_100' => 100,
+    ];
+@endphp
+
 <x-layouts.app title="足場に作用する風圧力">
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
         <div class="max-w-7xl mx-auto pb-16">
@@ -107,16 +139,19 @@
                                         -
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-2 py-1">
+                                        @php $code = $rangeMap[$range[1]] ?? null; @endphp
                                         <input type="number" id="width_{{ $range[1] }}" step="0.1"
                                             min="0" max="100"
                                             class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
-                                            placeholder="0.0" oninput="calculateRow('{{ $range[1] }}')" />
+                                            placeholder="0.0" oninput="calculateRow('{{ $range[1] }}')"
+                                            value="{{ optional($rangeDefaults->get((string) $code))->L }}" />
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-2 py-1">
                                         <input type="number" id="height_{{ $range[1] }}" step="0.1"
                                             min="0" max="100"
                                             class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
-                                            placeholder="0.0" oninput="calculateRow('{{ $range[1] }}')" />
+                                            placeholder="0.0" oninput="calculateRow('{{ $range[1] }}')"
+                                            value="{{ optional($rangeDefaults->get((string) $code))->H }}" />
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white"
                                         id="limit_height_{{ $range[1] }}">
@@ -124,7 +159,7 @@
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white"
                                         id="load_{{ $range[1] }}">
-                                        -
+                                        {{ optional($rangeDefaults->get((string) $code))->Pbtm ?? '-' }}
                                     </td>
                                     <td class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white"
                                         id="allowable_stress_{{ $range[1] }}">
@@ -158,6 +193,23 @@
     </div>
 
     <script>
+        const rangeMappingDbToScreen = {
+            '10': '0_10',
+            '20': '10_20',
+            '35': '20_35',
+            '40': '35_40',
+            '50': '40_50',
+            '55': '50_55',
+            '70': '55_70',
+            '100': '70_100'
+        };
+
+        const rangeMappingScreenToDb = Object.fromEntries(
+            Object.entries(rangeMappingDbToScreen).map(([db, screen]) => [screen, db])
+        );
+
+        const prefilledRanges = Object.assign({}, @json($prefilledRangeData));
+
         // wall_tie_stress2の値をJavaScriptで利用可能にする
         const wallTieStress2 = {{ $param->wall_tie_stress2 ?? 0 }};
 
@@ -177,9 +229,12 @@
         const c1Value = {{ $param->C1 ?? 0 }};
 
         // ページ読み込み時にS係数と壁繋ぎ許容応力を表示
+        let suppressAutoSave = false;
+
         window.addEventListener('DOMContentLoaded', function() {
             displaySCoefficients();
             initializeAllowableStress();
+            applyPrefilledValues();
         });
 
         function displaySCoefficients() {
@@ -216,134 +271,100 @@
         }
 
         function calculateRow(heightRange) {
-            const width = parseFloat(document.getElementById(`width_${heightRange}`).value) || 0;
-            const height = parseFloat(document.getElementById(`height_${heightRange}`).value) || 0;
+            const widthInput = document.getElementById(`width_${heightRange}`);
+            const heightInput = document.getElementById(`height_${heightRange}`);
+            const widthRaw = widthInput ? widthInput.value.trim() : '';
+            const heightRaw = heightInput ? heightInput.value.trim() : '';
 
-            // リアルタイムで面積をデータベースに保存
-            saveAreaToDatabase(heightRange, width, height);
+            const width = widthRaw === '' ? null : Number.parseFloat(widthRaw);
+            const height = heightRaw === '' ? null : Number.parseFloat(heightRaw);
 
-            // 幅または高さが入力されている場合のみ処理
-            if (width > 0 || height > 0) {
-                // 両方の値が入力されている場合の計算
-                if (width > 0 && height > 0) {
-                    const area = width * height;
-                    const s = parseFloat(document.getElementById(`s_${heightRange}`).textContent) || 1.0;
+            const widthValue = Number.isFinite(width) ? width : 0;
+            const heightValue = Number.isFinite(height) ? height : 0;
+            const hasWidth = Number.isFinite(width) && width > 0;
+            const hasHeight = Number.isFinite(height) && height > 0;
 
-                    // 高さ範囲の変換マッピング
-                    const rangeMapping = {
-                        '0_10': '10',
-                        '10_20': '20',
-                        '20_35': '35',
-                        '35_40': '40',
-                        '40_50': '50',
-                        '50_55': '55',
-                        '55_70': '70',
-                        '70_100': '100'
-                    };
-                    const dbHeightRange = rangeMapping[heightRange];
-                    const qzN = qzNValues[dbHeightRange] || 0;
-                    const c1 = c1Value || 0;
-                    const wallTieStress = wallTieStress2 || 0;
+            if (!suppressAutoSave) {
+                saveAreaToDatabase(heightRange, widthValue, heightValue);
+            }
 
-                    // 限界高の計算: 限界高さ = 壁繋ぎ許容応力 / (QzN × C1 × 幅)
-                    if (qzN > 0 && c1 > 0 && width > 0 && wallTieStress > 0) {
-                        const limitHeight = wallTieStress / (qzN * c1 * width);
-                        // ROUNDDOWN(値, 3) = 小数点第3位で切り下げ
-                        const limitHeightRounded = Math.floor(limitHeight * 1000) / 1000;
-                        document.getElementById(`limit_height_${heightRange}`).textContent = limitHeightRounded.toFixed(3);
-                    } else {
-                        document.getElementById(`limit_height_${heightRange}`).textContent = '-';
-                    }
+            const limitElement = document.getElementById(`limit_height_${heightRange}`);
+            const loadElement = document.getElementById(`load_${heightRange}`);
+            const allowableElement = document.getElementById(`allowable_stress_${heightRange}`);
+            const judgmentElement = document.getElementById(`judgment_${heightRange}`);
 
-                    // 負荷荷重の計算（P = QzN × C1 × A）
+            if (!hasWidth && !hasHeight) {
+                if (limitElement) limitElement.textContent = '-';
+                if (loadElement) loadElement.textContent = '-';
+                if (allowableElement) allowableElement.textContent = '-';
+                if (judgmentElement) {
+                    judgmentElement.textContent = '-';
+                    judgmentElement.className = 'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold';
+                }
+                return;
+            }
 
-                    let load = 0;
-                    if (qzN > 0 && c1 > 0 && area > 0) {
-                        load = qzN * c1 * area;
-                        document.getElementById(`load_${heightRange}`).textContent = load.toFixed(2);
-                    } else {
-                        document.getElementById(`load_${heightRange}`).textContent = '-';
-                    }
+            const dbHeightRange = rangeMappingScreenToDb[heightRange];
+            const qzN = dbHeightRange ? (qzNValues[dbHeightRange] || 0) : 0;
+            const c1 = c1Value || 0;
+            const allowableStress = wallTieStress2 || 0;
 
-                    // 判定
-                    const allowableStress = wallTieStress2;
-                    if (load > 0 && allowableStress > 0) {
-                        const judgment = load <= allowableStress ? 'OK' : 'NG';
-                        const judgmentCell = document.getElementById(`judgment_${heightRange}`);
-                        judgmentCell.textContent = judgment;
-                        judgmentCell.className = judgment === 'OK' ?
-                            'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-green-600' :
-                            'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-red-600';
-                    } else {
-                        document.getElementById(`judgment_${heightRange}`).textContent = '-';
-                        document.getElementById(`judgment_${heightRange}`).className =
-                            'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold';
-                    }
-                } else {
-                    // どちらか一方のみ入力されている場合
-                    // 幅が入力されている場合は限界高さを計算
-                    const rangeMapping = {
-                        '0_10': '10',
-                        '10_20': '20',
-                        '20_35': '35',
-                        '35_40': '40',
-                        '40_50': '50',
-                        '50_55': '55',
-                        '55_70': '70',
-                        '70_100': '100'
-                    };
-                    const dbHeightRange = rangeMapping[heightRange];
-                    const qzN = qzNValues[dbHeightRange] || 0;
-                    const c1 = c1Value || 0;
-                    const wallTieStress = wallTieStress2 || 0;
+            let computedLoad = null;
 
-                    if (width > 0 && qzN > 0 && c1 > 0 && wallTieStress > 0) {
-                        // 限界高の計算: 限界高さ = 壁繋ぎ許容応力 / (QzN × C1 × 幅)
-                        const limitHeight = wallTieStress / (qzN * c1 * width);
-                        const limitHeightRounded = Math.floor(limitHeight * 1000) / 1000;
-                        document.getElementById(`limit_height_${heightRange}`).textContent = limitHeightRounded.toFixed(3);
-                    } else {
-                        document.getElementById(`limit_height_${heightRange}`).textContent = '-';
-                    }
+            if (hasWidth && hasHeight) {
+                const area = widthValue * heightValue;
 
-                    // 負荷荷重と判定はクリア
-                    document.getElementById(`load_${heightRange}`).textContent = '-';
-                    document.getElementById(`judgment_${heightRange}`).textContent = '-';
-                    document.getElementById(`judgment_${heightRange}`).className =
-                        'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold';
+                if (qzN > 0 && c1 > 0 && widthValue > 0 && allowableStress > 0 && limitElement) {
+                    const limitHeight = allowableStress / (qzN * c1 * widthValue);
+                    const limitHeightRounded = Math.floor(limitHeight * 1000) / 1000;
+                    limitElement.textContent = limitHeightRounded.toFixed(3);
+                } else if (limitElement) {
+                    limitElement.textContent = '-';
                 }
 
-                // 幅または高さが入力されている場合は壁繋ぎ許容応力を表示
-                if (wallTieStress2 > 0) {
-                    document.getElementById(`allowable_stress_${heightRange}`).textContent = wallTieStress2.toFixed(2);
-                } else {
-                    document.getElementById(`allowable_stress_${heightRange}`).textContent = '-';
+                if (qzN > 0 && c1 > 0 && area > 0) {
+                    computedLoad = qzN * c1 * area;
+                    if (loadElement) {
+                        loadElement.textContent = computedLoad.toFixed(2);
+                    }
+                } else if (loadElement) {
+                    loadElement.textContent = '-';
                 }
             } else {
-                // 両方とも0または空の場合は全てクリア
-                document.getElementById(`limit_height_${heightRange}`).textContent = '-';
-                document.getElementById(`load_${heightRange}`).textContent = '-';
-                document.getElementById(`allowable_stress_${heightRange}`).textContent = '-';
-                document.getElementById(`judgment_${heightRange}`).textContent = '-';
-                document.getElementById(`judgment_${heightRange}`).className =
-                    'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold';
+                if (hasWidth && qzN > 0 && c1 > 0 && allowableStress > 0 && limitElement) {
+                    const limitHeight = allowableStress / (qzN * c1 * widthValue);
+                    const limitHeightRounded = Math.floor(limitHeight * 1000) / 1000;
+                    limitElement.textContent = limitHeightRounded.toFixed(3);
+                } else if (limitElement) {
+                    limitElement.textContent = '-';
+                }
+
+                if (loadElement) {
+                    loadElement.textContent = '-';
+                }
+                computedLoad = null;
+            }
+
+            if (allowableElement) {
+                allowableElement.textContent = wallTieStress2 > 0 ? wallTieStress2.toFixed(2) : '-';
+            }
+
+            if (judgmentElement) {
+                if (computedLoad !== null && allowableStress > 0) {
+                    const judgment = computedLoad <= allowableStress ? 'OK' : 'NG';
+                    judgmentElement.textContent = judgment;
+                    judgmentElement.className = judgment === 'OK'
+                        ? 'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-green-600'
+                        : 'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-red-600';
+                } else {
+                    judgmentElement.textContent = '-';
+                    judgmentElement.className = 'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold';
+                }
             }
         }
 
         function saveAreaToDatabase(heightRange, width, height) {
-            // 高さ範囲の形式を変換（0_10 → 10, 10_20 → 20, etc.）
-            const rangeMapping = {
-                '0_10': '10',
-                '10_20': '20',
-                '20_35': '35',
-                '35_40': '40',
-                '40_50': '50',
-                '50_55': '55',
-                '55_70': '70',
-                '70_100': '100'
-            };
-
-            const dbHeightRange = rangeMapping[heightRange];
+            const dbHeightRange = rangeMappingScreenToDb[heightRange];
             if (!dbHeightRange) {
                 console.error('Invalid height range:', heightRange);
                 return;
@@ -382,56 +403,39 @@
             const heightRanges = ['0_10', '10_20', '20_35', '35_40', '40_50', '50_55', '55_70', '70_100'];
 
             heightRanges.forEach(range => {
-                const width = parseFloat(document.getElementById(`width_${range}`).value) || null;
-                const height = parseFloat(document.getElementById(`height_${range}`).value) || null;
+                const widthInput = document.getElementById(`width_${range}`);
+                const heightInput = document.getElementById(`height_${range}`);
+                const widthRaw = widthInput ? widthInput.value.trim() : '';
+                const heightRaw = heightInput ? heightInput.value.trim() : '';
 
-                // カラム名の変換（0_10 → 10, 10_20 → 20, etc.）
-                const rangeMapping = {
-                    '0_10': '10',
-                    '10_20': '20',
-                    '20_35': '35',
-                    '35_40': '40',
-                    '40_50': '50',
-                    '50_55': '55',
-                    '55_70': '70',
-                    '70_100': '100'
-                };
-                const dbRange = rangeMapping[range];
+                const width = widthRaw === '' ? null : Number.parseFloat(widthRaw);
+                const height = heightRaw === '' ? null : Number.parseFloat(heightRaw);
 
-                // 幅の格納
-                if (width !== null && dbRange) {
-                    data[`L${dbRange}`] = width;
+                const dbRange = rangeMappingScreenToDb[range];
+                if (!dbRange) {
+                    return;
                 }
 
-                // 高さの格納
-                if (height !== null && dbRange) {
-                    data[`H${dbRange}`] = height;
-                }
+                data[`L${dbRange}`] = Number.isFinite(width) ? width : null;
+                data[`H${dbRange}`] = Number.isFinite(height) ? height : null;
+                data[`A${dbRange}`] = (Number.isFinite(width) && Number.isFinite(height)) ? width * height : null;
 
-                // 面積の格納
-                if (width !== null && height !== null && dbRange) {
-                    data[`A${dbRange}`] = width * height;
-                }
-
-                // 負荷荷重（Pbtm）の格納
                 const loadElement = document.getElementById(`load_${range}`);
-                console.log(`Range ${range}: loadElement =`, loadElement);
-                if (loadElement && dbRange) {
-                    console.log(`Range ${range}: textContent = "${loadElement.textContent}"`);
-                    if (loadElement.textContent !== '-') {
-                        const loadValue = parseFloat(loadElement.textContent);
-                        console.log(`Range ${range}: loadValue =`, loadValue);
-                        if (!isNaN(loadValue)) {
-                            data[`Pbtm${dbRange}`] = loadValue;
-                            console.log(`Range ${range}: Pbtm${dbRange} = ${loadValue}`);
+                let loadValue = null;
+                if (loadElement) {
+                    const loadText = loadElement.textContent.trim();
+                    if (loadText !== '-' && loadText !== '') {
+                        const parsed = Number.parseFloat(loadText);
+                        if (!Number.isNaN(parsed)) {
+                            loadValue = parsed;
                         }
                     }
                 }
+
+                data[`Pbtm${dbRange}`] = loadValue;
             });
 
             // デバッグ用：送信データをコンソールに出力
-            console.log('送信データ:', data);
-
             // フォームを作成して送信
             const form = document.createElement('form');
             form.method = 'POST';
@@ -446,13 +450,11 @@
 
             // データを追加
             Object.keys(data).forEach(key => {
-                if (data[key] !== null) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = key;
-                    input.value = data[key];
-                    form.appendChild(input);
-                }
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = data[key] ?? '';
+                form.appendChild(input);
             });
 
             // フォームをページに追加して送信
@@ -478,22 +480,12 @@
                 const data = await response.json();
 
                 // 高さ範囲のマッピング（データベース → 画面表示）
-                const rangeMapping = {
-                    '10': '0_10',
-                    '20': '10_20',
-                    '35': '20_35',
-                    '40': '35_40',
-                    '50': '40_50',
-                    '55': '50_55',
-                    '70': '55_70',
-                    '100': '70_100'
-                };
-
                 let updatedCount = 0;
+                suppressAutoSave = true;
 
                 // L系列（幅）の値を設定
                 Object.keys(data.widths || {}).forEach(dbRange => {
-                    const screenRange = rangeMapping[dbRange];
+                    const screenRange = rangeMappingDbToScreen[dbRange];
                     if (screenRange && data.widths[dbRange] !== null) {
                         const widthInput = document.getElementById(`width_${screenRange}`);
                         if (widthInput) {
@@ -505,7 +497,7 @@
 
                 // H系列（高さ）の値を設定
                 Object.keys(data.heights || {}).forEach(dbRange => {
-                    const screenRange = rangeMapping[dbRange];
+                    const screenRange = rangeMappingDbToScreen[dbRange];
                     if (screenRange && data.heights[dbRange] !== null) {
                         const heightInput = document.getElementById(`height_${screenRange}`);
                         if (heightInput) {
@@ -516,8 +508,31 @@
                 });
 
                 // 値を設定後に各行の計算を実行
-                Object.values(rangeMapping).forEach(screenRange => {
+                Object.values(rangeMappingDbToScreen).forEach(screenRange => {
                     calculateRow(screenRange);
+                });
+
+                Object.keys(data.loads || {}).forEach(dbRange => {
+                    const screenRange = rangeMappingDbToScreen[dbRange];
+                    if (screenRange) {
+                        const loadElement = document.getElementById(`load_${screenRange}`);
+                        const judgmentElement = document.getElementById(`judgment_${screenRange}`);
+                        if (loadElement) {
+                            const loadValue = data.loads[dbRange];
+                            loadElement.textContent = loadValue;
+
+                            if (judgmentElement && wallTieStress2 > 0) {
+                                const parsedLoad = Number.parseFloat(loadValue);
+                                if (!Number.isNaN(parsedLoad)) {
+                                    const judgment = parsedLoad <= wallTieStress2 ? 'OK' : 'NG';
+                                    judgmentElement.textContent = judgment;
+                                    judgmentElement.className = judgment === 'OK'
+                                        ? 'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-green-600'
+                                        : 'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-red-600';
+                                }
+                            }
+                        }
+                    }
                 });
 
                 // 成功メッセージを表示
@@ -526,7 +541,44 @@
             } catch (error) {
                 console.error('Error:', error);
                 showInputMessage('最終値の取得に失敗しました: ' + error.message, 'error');
+            } finally {
+                suppressAutoSave = false;
             }
+        }
+
+        function applyPrefilledValues() {
+            suppressAutoSave = true;
+
+            Object.entries(rangeMappingDbToScreen).forEach(([dbRange, screenRange]) => {
+                const record = prefilledRanges[dbRange];
+                if (!record) {
+                    return;
+                }
+
+                const loadElement = document.getElementById(`load_${screenRange}`);
+                const judgmentElement = document.getElementById(`judgment_${screenRange}`);
+                if (loadElement) {
+                    loadElement.textContent = record.Pbtm ?? '-';
+                }
+
+                calculateRow(screenRange);
+
+                if (record.Pbtm !== null && loadElement) {
+                    loadElement.textContent = record.Pbtm;
+                    if (judgmentElement && wallTieStress2 > 0) {
+                        const parsedPrefill = Number.parseFloat(record.Pbtm);
+                        if (!Number.isNaN(parsedPrefill)) {
+                            const judgment = parsedPrefill <= wallTieStress2 ? 'OK' : 'NG';
+                            judgmentElement.textContent = judgment;
+                            judgmentElement.className = judgment === 'OK'
+                                ? 'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-green-600'
+                                : 'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-red-600';
+                        }
+                    }
+                }
+            });
+
+            suppressAutoSave = false;
         }
 
         // メッセージ表示関数

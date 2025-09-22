@@ -1,3 +1,26 @@
+@php
+    $topRangeDefaults = isset($topRanges)
+        ? collect([10, 20, 35, 40, 50, 55, 70, 100])->mapWithKeys(function ($code) use ($topRanges) {
+            return [(string) $code => $topRanges->get($code)];
+        })
+        : collect();
+
+    $topPrefillData = $topRangeDefaults->mapWithKeys(function ($record, $code) {
+        if (!$record) {
+            return [$code => null];
+        }
+
+        return [$code => [
+            'Ltop' => $record->Ltop,
+            'Htopup' => $record->Htopup,
+            'Htopdn' => $record->Htopdn,
+            'Ptop' => $record->Ptop,
+            'Wup' => $record->Wup,
+            'Wdn' => $record->Wdn,
+        ]];
+    })->toArray();
+@endphp
+
 <x-layouts.app title="足場に作用する風圧力（計算結果）">
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
         <div class="max-w-7xl mx-auto pb-16">
@@ -143,7 +166,8 @@
                                     {{-- 幅（2行分のrowspan） --}}
                                     <td rowspan="2" class="border border-gray-300 dark:border-gray-600 px-2 py-1">
                                         <input type="number" id="width_{{ $heightKey }}" step="0.1"
-                                            min="0" max="100" value=""
+                                            min="0" max="100"
+                                            value="{{ optional($topRangeDefaults->get((string) $heightKey))->Ltop }}"
                                             class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
                                             oninput="calculateRow('{{ $heightKey }}')" />
                                     </td>
@@ -157,7 +181,8 @@
                                     {{-- 設定高(m) A --}}
                                     <td class="border border-gray-300 dark:border-gray-600 px-2 py-1">
                                         <input type="number" id="height_a_{{ $heightKey }}" step="0.1"
-                                            min="0" max="100" value=""
+                                            min="0" max="100"
+                                            value="{{ optional($topRangeDefaults->get((string) $heightKey))->Htopup }}"
                                             class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
                                             oninput="calculateRow('{{ $heightKey }}')" />
                                     </td>
@@ -179,13 +204,17 @@
                                     {{-- W(KN) A --}}
                                     <td id="w_a_{{ $heightKey }}"
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        -
+                                        {{ optional($topRangeDefaults->get((string) $heightKey))->Wup !== null
+                                            ? number_format($topRangeDefaults->get((string) $heightKey)->Wup, 3)
+                                            : '-' }}
                                     </td>
 
                                     {{-- 負荷荷重（2行分のrowspan） --}}
                                     <td rowspan="2" id="load_{{ $heightKey }}"
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        -
+                                        {{ optional($topRangeDefaults->get((string) $heightKey))->Ptop !== null
+                                            ? number_format($topRangeDefaults->get((string) $heightKey)->Ptop, 3)
+                                            : '-' }}
                                     </td>
 
                                     {{-- 壁繋ぎ許容応力（2行分のrowspan） --}}
@@ -212,7 +241,8 @@
                                     {{-- 設定高(m) B --}}
                                     <td class="border border-gray-300 dark:border-gray-600 px-2 py-1">
                                         <input type="number" id="height_b_{{ $heightKey }}" step="0.1"
-                                            min="0" max="100" value=""
+                                            min="0" max="100"
+                                            value="{{ optional($topRangeDefaults->get((string) $heightKey))->Htopdn }}"
                                             class="w-full px-2 py-1 bg-yellow-100 border-0 text-center text-sm focus:ring-2 focus:ring-blue-500 focus:bg-yellow-50"
                                             oninput="calculateRow('{{ $heightKey }}')" />
                                     </td>
@@ -234,7 +264,9 @@
                                     {{-- W(KN) B --}}
                                     <td id="w_b_{{ $heightKey }}"
                                         class="border border-gray-300 dark:border-gray-600 px-4 py-3 text-center text-gray-900 dark:text-white">
-                                        -
+                                        {{ optional($topRangeDefaults->get((string) $heightKey))->Wdn !== null
+                                            ? number_format($topRangeDefaults->get((string) $heightKey)->Wdn, 3)
+                                            : '-' }}
                                     </td>
                                 </tr>
                             @endforeach
@@ -343,6 +375,10 @@
         const c1Value = {{ $param->C1 ?? 0 }};
         const c2Value = {{ $param->C2 ?? 0 }};
 
+        const heightRangeCodes = ['10', '20', '35', '40', '50', '55', '70', '100'];
+        const topPrefilledData = Object.assign({}, @json($topPrefillData));
+        let suppressAutoSave = false;
+
         // W上の値（データベースから取得）
         const wUpValues = {
             '10': {{ $param->Wup10 ?? 0 }},
@@ -369,16 +405,65 @@
 
         // ページ読み込み時に初期計算を実行
         window.addEventListener('DOMContentLoaded', function() {
-            const heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
-            heightRanges.forEach(range => {
+            suppressAutoSave = true;
+            heightRangeCodes.forEach(range => {
                 calculateRow(range);
+            });
+            suppressAutoSave = false;
+
+            heightRangeCodes.forEach(range => {
+                const record = topPrefilledData[range];
+                if (!record) {
+                    return;
+                }
+
+                const wUpCell = document.getElementById(`w_a_${range}`);
+                const wDnCell = document.getElementById(`w_b_${range}`);
+                const loadCell = document.getElementById(`load_${range}`);
+
+                if (wUpCell) {
+                    const wUpNum = Number(record.Wup);
+                    wUpCell.textContent = Number.isFinite(wUpNum)
+                        ? wUpNum.toFixed(3)
+                        : '-';
+                }
+
+                if (wDnCell) {
+                    const wDnNum = Number(record.Wdn);
+                    wDnCell.textContent = Number.isFinite(wDnNum)
+                        ? wDnNum.toFixed(3)
+                        : '-';
+                }
+
+                if (loadCell) {
+                    const loadNum = Number(record.Ptop);
+                    if (Number.isFinite(loadNum)) {
+                        loadCell.textContent = loadNum.toFixed(3);
+                        updateJudgment(range, loadNum);
+                    } else {
+                        loadCell.textContent = '-';
+                        updateJudgment(range, null);
+                    }
+                }
             });
         });
 
         function calculateRow(heightRange) {
-            const width = parseFloat(document.getElementById(`width_${heightRange}`).value) || 0;
-            const heightA = parseFloat(document.getElementById(`height_a_${heightRange}`).value) || 0;
-            const heightB = parseFloat(document.getElementById(`height_b_${heightRange}`).value) || 0;
+            const widthInput = document.getElementById(`width_${heightRange}`);
+            const heightAInput = document.getElementById(`height_a_${heightRange}`);
+            const heightBInput = document.getElementById(`height_b_${heightRange}`);
+
+            const widthRaw = widthInput ? widthInput.value.trim() : '';
+            const heightARaw = heightAInput ? heightAInput.value.trim() : '';
+            const heightBRaw = heightBInput ? heightBInput.value.trim() : '';
+
+            const widthValue = widthRaw === '' ? null : Number.parseFloat(widthRaw);
+            const heightAValue = heightARaw === '' ? null : Number.parseFloat(heightARaw);
+            const heightBValue = heightBRaw === '' ? null : Number.parseFloat(heightBRaw);
+
+            const width = Number.isFinite(widthValue) ? widthValue : 0;
+            const heightA = Number.isFinite(heightAValue) ? heightAValue : 0;
+            const heightB = Number.isFinite(heightBValue) ? heightBValue : 0;
 
             const qzN = qzNValues[heightRange] || 0;
             const c1 = c1Value || 0;
@@ -475,7 +560,9 @@
                 judgmentElement.className = judgmentClass;
 
                 // W値をデータベースに保存
-                saveWValues(heightRange, wA !== '-' ? parseFloat(wA) : null, wB !== '-' ? parseFloat(wB) : null);
+                if (!suppressAutoSave) {
+                    saveWValues(heightRange, wA !== '-' ? parseFloat(wA) : null, wB !== '-' ? parseFloat(wB) : null);
+                }
             } else {
                 // 条件を満たさない場合は全て「-」を表示
                 document.getElementById(`limit_height_a_${heightRange}`).textContent = '-';
@@ -491,12 +578,18 @@
                     'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-gray-600';
 
                 // W値をnullで保存（値がクリアされた場合）
-                saveWValues(heightRange, null, null);
+                if (!suppressAutoSave) {
+                    saveWValues(heightRange, null, null);
+                }
             }
         }
 
         // W値をデータベースに保存する関数
         function saveWValues(heightRange, wupValue, wdnValue) {
+            if (suppressAutoSave) {
+                return;
+            }
+
             // CSRFトークンを取得
             const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
@@ -528,13 +621,12 @@
         // 計算終了ボタンの処理
         function finishCalculation() {
             // 全ての負荷荷重値と入力値を収集
-            const heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
             const loadValues = {};
             const widthValues = {};
             const heightAValues = {};
             const heightBValues = {};
 
-            heightRanges.forEach(range => {
+            heightRangeCodes.forEach(range => {
                 // 負荷荷重値を収集
                 const loadElement = document.getElementById(`load_${range}`);
                 const loadText = loadElement.textContent.trim();
@@ -602,7 +694,6 @@
         // 最終値を取得する関数
         async function loadLastWindPressureValues() {
             try {
-                console.log('最終値取得を開始します...');
                 const response = await fetch('/scheck/wind-pressure-result/get-last-values', {
                     method: 'GET',
                     headers: {
@@ -612,79 +703,93 @@
                     }
                 });
 
-                console.log('APIレスポンス:', response);
-
                 if (!response.ok) {
                     throw new Error('データの取得に失敗しました');
                 }
 
                 const data = await response.json();
-                console.log('取得したデータ:', data);
-
                 let updatedCount = 0;
-                const heightRanges = ['10', '20', '35', '40', '50', '55', '70', '100'];
+                suppressAutoSave = true;
 
                 // 幅の値を設定（Ltop系列）
-                console.log('幅のデータ:', data.widths);
-                heightRanges.forEach(range => {
+                heightRangeCodes.forEach(range => {
                     const widthInput = document.getElementById(`width_${range}`);
                     if (widthInput) {
                         const widthValue = data.widths[range];
                         if (widthValue !== null && widthValue !== undefined) {
-                            console.log(`width_${range}に値を設定:`, widthValue);
                             widthInput.value = widthValue;
                             updatedCount++;
                         } else {
-                            console.log(`width_${range}の値はnullです`);
                             widthInput.value = '';
                         }
-                    } else {
-                        console.log(`width_${range}の要素が見つかりません`);
                     }
                 });
 
                 // 設定高さAの値を設定（Htopup系列）
-                console.log('設定高さAのデータ:', data.heights_a);
-                heightRanges.forEach(range => {
+                heightRangeCodes.forEach(range => {
                     const heightAInput = document.getElementById(`height_a_${range}`);
                     if (heightAInput) {
                         const heightAValue = data.heights_a[range];
                         if (heightAValue !== null && heightAValue !== undefined) {
-                            console.log(`height_a_${range}に値を設定:`, heightAValue);
                             heightAInput.value = heightAValue;
                             updatedCount++;
                         } else {
-                            console.log(`height_a_${range}の値はnullです`);
                             heightAInput.value = '';
                         }
-                    } else {
-                        console.log(`height_a_${range}の要素が見つかりません`);
                     }
                 });
 
                 // 設定高さBの値を設定（Htopdn系列）
-                console.log('設定高さBのデータ:', data.heights_b);
-                heightRanges.forEach(range => {
+                heightRangeCodes.forEach(range => {
                     const heightBInput = document.getElementById(`height_b_${range}`);
                     if (heightBInput) {
                         const heightBValue = data.heights_b[range];
                         if (heightBValue !== null && heightBValue !== undefined) {
-                            console.log(`height_b_${range}に値を設定:`, heightBValue);
                             heightBInput.value = heightBValue;
                             updatedCount++;
                         } else {
-                            console.log(`height_b_${range}の値はnullです`);
                             heightBInput.value = '';
                         }
-                    } else {
-                        console.log(`height_b_${range}の要素が見つかりません`);
                     }
                 });
 
                 // 値を設定後に各行の計算を実行
-                heightRanges.forEach(range => {
+                heightRangeCodes.forEach(range => {
                     calculateRow(range);
                 });
+
+                // 取得したW値・負荷荷重値を反映
+                heightRangeCodes.forEach(range => {
+                    const wUpCell = document.getElementById(`w_a_${range}`);
+                    const wDnCell = document.getElementById(`w_b_${range}`);
+                    const loadCell = document.getElementById(`load_${range}`);
+
+                    if (wUpCell) {
+                        const value = data.wup?.[range];
+                        const numeric = Number(value);
+                        wUpCell.textContent = Number.isFinite(numeric) ? numeric.toFixed(3) : '-';
+                    }
+
+                    if (wDnCell) {
+                        const value = data.wdn?.[range];
+                        const numeric = Number(value);
+                        wDnCell.textContent = Number.isFinite(numeric) ? numeric.toFixed(3) : '-';
+                    }
+
+                    if (loadCell) {
+                        const value = data.loads?.[range];
+                        const numeric = Number(value);
+                        if (Number.isFinite(numeric)) {
+                            loadCell.textContent = numeric.toFixed(3);
+                            updateJudgment(range, numeric);
+                        } else {
+                            loadCell.textContent = '-';
+                            updateJudgment(range, null);
+                        }
+                    }
+                });
+
+                suppressAutoSave = false;
 
                 // 成功メッセージを表示
                 showWindPressureMessage(`最終値を取得しました（${updatedCount}個のフィールドを更新）`, 'success');
@@ -692,6 +797,46 @@
             } catch (error) {
                 console.error('Error:', error);
                 showWindPressureMessage('最終値の取得に失敗しました: ' + error.message, 'error');
+            } finally {
+                suppressAutoSave = false;
+            }
+        }
+
+        function updateJudgment(range, loadValue) {
+            const judgmentElement = document.getElementById(`judgment_${range}`);
+            if (!judgmentElement) {
+                return;
+            }
+
+            const allowableCell = document.getElementById(`allowable_stress_${range}`);
+            const allowableText = wallTieStress2 > 0 ? wallTieStress2.toFixed(2) : '-';
+            if (allowableCell) {
+                allowableCell.textContent = allowableText;
+            }
+
+            if (loadValue === null || loadValue === undefined || wallTieStress2 <= 0) {
+                judgmentElement.textContent = '-';
+                judgmentElement.className =
+                    'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-gray-600';
+                return;
+            }
+
+            const loadNum = Number(loadValue);
+            if (Number.isNaN(loadNum)) {
+                judgmentElement.textContent = '-';
+                judgmentElement.className =
+                    'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-gray-600';
+                return;
+            }
+
+            if (loadNum <= wallTieStress2) {
+                judgmentElement.textContent = 'OK';
+                judgmentElement.className =
+                    'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-green-600';
+            } else {
+                judgmentElement.textContent = 'NG';
+                judgmentElement.className =
+                    'border border-gray-300 dark:border-gray-600 px-4 py-3 text-center font-bold text-red-600';
             }
         }
 
