@@ -176,83 +176,129 @@
 
     {{-- JavaScript --}}
     <script>
-        let selectedKe = 1.0;
+        let selectedKe = @json($param->Ke ?? 1.0);
         let selectedRegion = 'その他';
         let selectedInfo = 'その他の地域';
+        const initialKe = @json($param->Ke);
 
-        function selectKe(region, ke, description) {
-            // 全ての行のハイライトをリセット
+        function resetRows() {
             document.querySelectorAll('.ke-row').forEach(row => {
                 row.classList.remove('bg-blue-100', 'dark:bg-blue-900');
             });
 
-            // 全ての選択マークをリセット
             document.querySelectorAll('.selection-mark').forEach(mark => {
                 mark.classList.add('hidden');
                 mark.classList.remove('text-white');
                 mark.classList.add('text-blue-500');
             });
 
-            // 全ての選択ボタンをリセット
             document.querySelectorAll('.ke-row td:nth-child(2) div').forEach(btn => {
                 btn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
                 btn.classList.add('border-2', 'border-blue-500', 'hover:bg-blue-100', 'dark:hover:bg-blue-900');
             });
+        }
 
-            // 選択された行をハイライト
-            const selectedRow = event.target.closest('.ke-row');
-            selectedRow.classList.add('bg-blue-100', 'dark:bg-blue-900');
+        function highlightRow(row) {
+            if (!row) {
+                return;
+            }
+            row.classList.add('bg-blue-100', 'dark:bg-blue-900');
 
-            // 選択された行の選択マークを表示
-            const selectedMark = selectedRow.querySelector('.selection-mark');
-            selectedMark.classList.remove('hidden');
+            const mark = row.querySelector('.selection-mark');
+            if (mark) {
+                mark.classList.remove('hidden');
+                mark.classList.add('text-white');
+                mark.classList.remove('text-blue-500');
+            }
 
-            // 選択された行のボタンをアクティブに
-            const selectedBtn = selectedRow.querySelector('td:nth-child(2) div');
-            selectedBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
-            selectedBtn.classList.remove('hover:bg-blue-100', 'dark:hover:bg-blue-900');
-            selectedMark.classList.add('text-white');
-            selectedMark.classList.remove('text-blue-500');
+            const btn = row.querySelector('td:nth-child(2) div');
+            if (btn) {
+                btn.classList.remove('border-2', 'border-blue-500', 'hover:bg-blue-100', 'dark:hover:bg-blue-900');
+                btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            }
+        }
 
-            // 選択結果を保存
-            selectedKe = ke;
+        function selectKe(region, ke, description, rowElement = null) {
+            resetRows();
+
+            let selectedRow = rowElement;
+            if (!selectedRow && typeof event !== 'undefined' && event.target) {
+                selectedRow = event.target.closest('.ke-row');
+            }
+            highlightRow(selectedRow);
+
+            selectedKe = parseFloat(ke);
             selectedRegion = region;
             selectedInfo = description;
 
-            // 結果表示を更新
-            document.getElementById('selected-ke').textContent = ke;
-            document.getElementById('selected-info').textContent = `${region}: ${description}`;
+            document.getElementById('selected-ke').textContent = selectedKe.toFixed(2).replace(/\.00$/, '');
+            document.getElementById('selected-info').textContent = description ? `${region}: ${description}` : region || description || '';
+            document.getElementById('selection-result').style.display = 'block';
+            document.getElementById('confirm-btn').disabled = false;
         }
 
         function confirmSelection() {
-            // Ke値をサーバーに送信するフォームを作成
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '{{ route('scheck.ke-coefficient.save') }}';
 
-            // CSRFトークンを追加
             const csrfToken = document.createElement('input');
             csrfToken.type = 'hidden';
             csrfToken.name = '_token';
             csrfToken.value = '{{ csrf_token() }}';
             form.appendChild(csrfToken);
 
-            // Ke値を追加
             const keInput = document.createElement('input');
             keInput.type = 'hidden';
             keInput.name = 'Ke';
             keInput.value = selectedKe;
             form.appendChild(keInput);
 
-            // フォームをページに追加して送信
             document.body.appendChild(form);
             form.submit();
         }
 
-        // 初期状態で「その他」を選択状態にする
         window.addEventListener('DOMContentLoaded', function() {
-            // 初期選択状態として「その他」の行を青色でハイライト
-            document.getElementById('row_others').classList.add('bg-blue-100', 'dark:bg-blue-900');
+            const rows = Array.from(document.querySelectorAll('.ke-row'));
+            rows.forEach(row => {
+                const keText = row.querySelector('td:nth-child(3)')?.textContent?.trim();
+                if (!keText) {
+                    return;
+                }
+                row.dataset.ke = parseFloat(keText);
+                row.dataset.region = row.querySelector('td:first-child')?.textContent?.trim() ?? '';
+                row.dataset.description = row.querySelector('td:nth-child(4)')?.textContent?.trim() ?? '';
+            });
+
+            if (initialKe) {
+                const matchedRow = rows.find(row => Math.abs((row.dataset.ke ?? NaN) - initialKe) < 0.001);
+                if (matchedRow) {
+                    selectKe(
+                        matchedRow.dataset.region,
+                        initialKe,
+                        matchedRow.dataset.description,
+                        matchedRow
+                    );
+                } else {
+                    selectedKe = parseFloat(initialKe);
+                    selectedRegion = '';
+                    selectedInfo = `現在設定: Ke = ${initialKe}`;
+                    document.getElementById('selected-ke').textContent = initialKe;
+                    document.getElementById('selected-info').textContent = selectedInfo;
+                    document.getElementById('selection-result').style.display = 'block';
+                    document.getElementById('confirm-btn').disabled = false;
+                }
+            } else {
+                const defaultRow = document.getElementById('row_others');
+                if (defaultRow) {
+                    selectKe(
+                        defaultRow.dataset.region || 'その他',
+                        parseFloat(defaultRow.dataset.ke ?? 1.0),
+                        defaultRow.dataset.description || 'その他の地域',
+                        defaultRow
+                    );
+                }
+            }
         });
     </script>
 </x-layouts.app>

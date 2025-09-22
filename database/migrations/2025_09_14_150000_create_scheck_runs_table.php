@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('scheck_runs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name')->nullable();
             $table->enum('status', ['draft', 'completed', 'failed'])->default('draft');
             $table->timestamp('started_at')->nullable();

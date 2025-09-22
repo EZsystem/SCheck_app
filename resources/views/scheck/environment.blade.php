@@ -274,6 +274,7 @@
     <script>
         let selectedVo = null;
         let selectedInfo = '';
+        const initialVo = @json($param->Vo);
 
         function selectVo(vo, region, area) {
             // 全てのボタンをリセット
@@ -311,19 +312,18 @@
             }
         }
 
-        // ページ読み込み時に福島県をデフォルト選択
+        // 既存値があれば表示
         window.addEventListener('DOMContentLoaded', function() {
-            // 福島県を自動選択
-            selectedVo = 16;
-            selectedInfo = '東北 - 福島県（白河市、須賀川市、岩瀬郡、西白河郡）';
+            if (initialVo !== null) {
+                selectedVo = initialVo;
+                selectedInfo = `現在設定: Vo = ${initialVo} m/s`;
 
-            // 結果表示を更新
-            document.getElementById('selected-vo').textContent = selectedVo;
-            document.getElementById('selected-info').textContent = selectedInfo;
-            document.getElementById('selection-result').style.display = 'block';
-
-            // 確定ボタンを有効化
-            document.getElementById('confirm-btn').disabled = false;
+                document.getElementById('selected-vo').textContent = selectedVo;
+                document.getElementById('selected-info').textContent = selectedInfo;
+                document.getElementById('selection-result').style.display = 'block';
+                document.getElementById('confirm-btn').disabled = false;
+                document.getElementById('input-vo').value = selectedVo;
+            }
         });
     </script>
 </x-layouts.app>

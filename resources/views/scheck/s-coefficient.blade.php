@@ -256,6 +256,7 @@
         let selectedColumn = null;
         let selectedInfo = '';
         let sValues = {};
+        const existingSValues = @json($currentSValues);
 
         // S値のデータ
         const sData = {
@@ -319,6 +320,38 @@
             'V': '大都市市街地'
         };
 
+        const bandKeyMap = {
+            '0-10': 'S10',
+            '10-20': 'S20',
+            '20-35': 'S35',
+            '35-40': 'S40',
+            '40-50': 'S50',
+            '50-55': 'S55',
+            '55-70': 'S70',
+            '70-100': 'S100',
+        };
+
+        const codeToBand = {
+            10: '0-10',
+            20: '10-20',
+            35: '20-35',
+            40: '35-40',
+            50: '40-50',
+            55: '50-55',
+            70: '55-70',
+            100: '70-100',
+        };
+
+        function updateHiddenInputs(values) {
+            Object.entries(bandKeyMap).forEach(([band, inputKey]) => {
+                const input = document.getElementById(`input-${inputKey}`);
+                if (!input) {
+                    return;
+                }
+                input.value = values[band] ?? '';
+            });
+        }
+
         function selectColumn(column, description) {
             // 全ての列のハイライトをリセット
             document.querySelectorAll('th[id^="col_"]').forEach(col => {
@@ -361,29 +394,54 @@
 
             // 確定ボタンを有効化
             document.getElementById('confirm-btn').disabled = false;
+
+            // hidden input を更新
+            const mappedValues = {};
+            Object.entries(sValues).forEach(([band, value]) => {
+                mappedValues[band] = value;
+            });
+            updateHiddenInputs(mappedValues);
         }
 
         function confirmSelection() {
-            if (selectedColumn) {
-                // sValues から各区分の値をフォームへ設定
-                const map = {
-                    'S10': '0-10',
-                    'S20': '10-20',
-                    'S35': '20-35',
-                    'S40': '35-40',
-                    'S50': '40-50',
-                    'S55': '50-55',
-                    'S70': '55-70',
-                    'S100': '70-100',
-                };
+            document.getElementById('s-save-form').submit();
+        }
 
-                Object.entries(map).forEach(([key, band]) => {
-                    const el = document.getElementById(`input-${key}`);
-                    el.value = sValues[band];
+        window.addEventListener('DOMContentLoaded', function() {
+            if (existingSValues) {
+                const mapped = {};
+                let hasValue = false;
+                Object.entries(codeToBand).forEach(([code, band]) => {
+                    const value = existingSValues[code] ?? null;
+                    if (value !== null && value !== undefined) {
+                        mapped[band] = parseFloat(value);
+                        hasValue = true;
+                    }
                 });
 
-                document.getElementById('s-save-form').submit();
+                if (hasValue) {
+                    sValues = mapped;
+                    selectedColumn = 'existing';
+                    selectedInfo = '保存済みのS値を使用します';
+
+                    const sValuesDisplay = document.getElementById('s-values-display');
+                    sValuesDisplay.innerHTML = '';
+                    Object.entries(bandKeyMap).forEach(([band, key]) => {
+                        if (!mapped[band]) {
+                            return;
+                        }
+                        const div = document.createElement('div');
+                        div.className = 'bg-white dark:bg-gray-700 p-2 rounded border';
+                        div.innerHTML = `<span class="font-medium">${band}m:</span> ${mapped[band]}`;
+                        sValuesDisplay.appendChild(div);
+                    });
+
+                    document.getElementById('selected-info').textContent = selectedInfo;
+                    document.getElementById('selection-result').style.display = 'block';
+                    document.getElementById('confirm-btn').disabled = false;
+                    updateHiddenInputs(mapped);
+                }
             }
-        }
+        });
     </script>
 </x-layouts.app>
